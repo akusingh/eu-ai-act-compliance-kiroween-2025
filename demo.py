@@ -7,9 +7,9 @@ from pathlib import Path
 
 from src.config import Config
 from src.observability import setup_logging, metrics_collector, trace_collector
-from src.orchestrator import ComplianceOrchestrator
-from src.sessions import SessionManager, ConversationMemory
-from src.tools import GoogleSearchTool, ComplianceScoringTool, EUAIActReferenceTool
+
+# ADK-based orchestrator with SequentialAgent
+from src.sequential_orchestrator import ComplianceOrchestrator
 
 
 # Setup logging
@@ -18,16 +18,17 @@ logger = logging.getLogger(__name__)
 
 
 def demo_basic_assessment():
-    """Demo basic compliance assessment workflow."""
+    """Demo basic compliance assessment workflow using ADK agents."""
     print("\n" + "="*70)
-    print("EU AI Act Compliance Agent - Demo")
+    print("EU AI Act Compliance Agent - ADK Demo")
+    print("Framework: Google ADK SequentialAgent + Parallel Research")
+    print("Model: Gemini 2.0 Flash")
+    print("Features: 3-source parallel search, reranking, agent-to-agent")
     print("="*70)
-    
-    # Initialize orchestrator
-    orchestrator = ComplianceOrchestrator()
     
     # Test case 1: High-risk system
     print("\n--- Test Case 1: Loan Approval System ---")
+    orchestrator = ComplianceOrchestrator()  # Create new orchestrator for each test
     system_info_1 = {
         "system_name": "AutoLoan Approval System",
         "use_case": "Automated creditworthiness assessment for loan applications",
@@ -41,17 +42,40 @@ def demo_basic_assessment():
     
     try:
         result_1 = orchestrator.assess_system(system_info_1)
-        print(f"Risk Classification: {result_1['assessment']['risk_tier']}")
-        print(f"Risk Score: {result_1['assessment']['risk_score']}/100")
-        print(f"Confidence: {result_1['assessment']['confidence_score']:.2f}")
-        print("Relevant Articles:")
-        for article in result_1['assessment']['relevant_articles']:
+        assessment = result_1['assessment']
+        report = result_1['report']
+        
+        # Extract risk classification
+        tier = assessment.get('tier', 'unknown')
+        score = assessment.get('score', 'N/A')
+        confidence = assessment.get('confidence', 0)
+        articles = assessment.get('articles', [])
+        
+        print(f"\n✅ Risk Classification: {tier}")
+        print(f"📊 Risk Score: {score}/100")
+        print(f"🎯 Confidence: {confidence:.2f}")
+        print(f"\n📜 Relevant Articles:")
+        for article in articles[:5]:  # Show top 5
             print(f"  - {article}")
+        
+        # Show compliance gaps
+        if 'compliance_gaps' in report:
+            print(f"\n⚠️  Compliance Gaps ({len(report['compliance_gaps'])})'):")
+            for gap in report['compliance_gaps'][:3]:  # Show top 3
+                print(f"  - {gap}")
+        
+        # Show top recommendations
+        if 'recommendations' in report:
+            print(f"\n💡 Key Recommendations:")
+            for rec in report['recommendations'][:2]:  # Show top 2
+                print(f"  - {rec}")
     except Exception as e:
-        logger.error(f"Assessment failed: {e}")
+        logger.error(f"Assessment failed: {e}", exc_info=True)
+        print(f"Error: {e}")
     
     # Test case 2: Minimal risk system
     print("\n--- Test Case 2: Music Recommendation System ---")
+    orchestrator2 = ComplianceOrchestrator()  # Create new orchestrator to avoid event loop issues
     system_info_2 = {
         "system_name": "Spotify Recommendation Engine",
         "use_case": "Personalized music recommendations based on listening history",
@@ -64,75 +88,21 @@ def demo_basic_assessment():
     }
     
     try:
-        result_2 = orchestrator.assess_system(system_info_2)
-        print(f"Risk Classification: {result_2['assessment']['risk_tier']}")
-        print(f"Risk Score: {result_2['assessment']['risk_score']}/100")
-        print(f"Confidence: {result_2['assessment']['confidence_score']:.2f}")
+        result_2 = orchestrator2.assess_system(system_info_2)
+        assessment = result_2['assessment']
+        
+        risk_tier = assessment.get('risk_tier', 'unknown')
+        if hasattr(risk_tier, 'value'):
+            risk_tier = risk_tier.value
+            
+        print(f"Risk Classification: {risk_tier}")
+        print(f"Risk Score: {assessment.get('risk_score', 'N/A')}/100")
+        print(f"Confidence: {assessment.get('confidence', assessment.get('confidence_score', 0)):.2f}")
     except Exception as e:
-        logger.error(f"Assessment failed: {e}")
+        logger.error(f"Assessment failed: {e}", exc_info=True)
+        print(f"Error: {e}")
 
 
-def demo_sessions_and_memory():
-    """Demo session management and multi-turn conversation."""
-    print("\n" + "="*70)
-    print("Session Management & Memory Demo")
-    print("="*70)
-    
-    session_manager = SessionManager(timeout_seconds=3600)
-    
-    # Create session
-    session = session_manager.create_session()
-    print(f"\nSession created: {session.session_id}")
-    
-    # Add messages to conversation
-    memory = ConversationMemory(session)
-    memory.add_exchange(
-        "I'm building a facial recognition system for access control",
-        "That's a high-risk system. Let me assess it against EU AI Act requirements."
-    )
-    
-    # Show context
-    print("\nConversation Context:")
-    print(memory.get_context_for_agent())
-    
-    # Show memory summary
-    print("\nMemory Summary:")
-    print(json.dumps(memory.get_memory_summary(), indent=2))
-
-
-def demo_tools():
-    """Demo available tools."""
-    print("\n" + "="*70)
-    print("Tools Demo")
-    print("="*70)
-    
-    # Google Search Tool
-    print("\n--- Google Search Tool ---")
-    search_tool = GoogleSearchTool()
-    results = search_tool.search("high-risk AI applications", num_results=2)
-    print(f"Found {len(results)} results:")
-    for i, result in enumerate(results, 1):
-        print(f"{i}. {result['title']}")
-        print(f"   {result['snippet'][:80]}...")
-    
-    # EU AI Act Reference Tool
-    print("\n--- EU AI Act Reference Tool ---")
-    ref_tool = EUAIActReferenceTool()
-    articles = ref_tool.search_articles("high-risk")
-    print(f"Found {len(articles)} articles mentioning 'high-risk':")
-    for article in articles:
-        print(f"  {article['article_id']}: {article['title']}")
-    
-    # Compliance Scoring Tool
-    print("\n--- Compliance Scoring Tool ---")
-    scoring_tool = ComplianceScoringTool()
-    system_data = {
-        "system_name": "Employment Screening AI",
-        "use_case": "Automated hiring decisions",
-    }
-    score_result = scoring_tool.calculate_compliance_score(system_data)
-    print(f"Score: {score_result['score']}/100")
-    print(f"Category: {score_result['category']}")
 
 
 def demo_observability():
@@ -190,20 +160,25 @@ def save_outputs():
 
 
 if __name__ == "__main__":
-    logger.info("Starting EU AI Act Compliance Agent Demo")
+    logger.info("Starting EU AI Act Compliance Agent Demo (ADK version)")
     
-    # Validate configuration
-    if not Config.validate():
-        logger.warning("Some APIs not configured - using mock implementations")
+    # Validate Gemini API key (required for ADK)
+    if not Config.GOOGLE_GENAI_API_KEY:
+        logger.error("GOOGLE_GENAI_API_KEY not set!")
+        print("\n⚠️  ERROR: GOOGLE_GENAI_API_KEY not configured in .env")
+        print("ADK requires Gemini API key to function.")
+        print("Get one at: https://aistudio.google.com/\n")
+        exit(1)
+    
+    logger.info(f"Using ADK framework with Gemini 2.0 Flash")
     
     # Run demos
     demo_basic_assessment()
-    demo_sessions_and_memory()
-    demo_tools()
-    demo_observability()
-    save_outputs()
+    # demo_observability()  # Optional: enable after basic test works
+    # save_outputs()        # Optional: enable after basic test works
     
     print("\n" + "="*70)
-    print("Demo completed successfully!")
+    print("ADK Demo completed successfully!")
+    print("Framework: Google ADK with Gemini 2.0 Flash")
     print("Check 'outputs/' directory for generated traces and metrics")
     print("="*70 + "\n")

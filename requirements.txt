@@ -1,14 +1,22 @@
-# ADK and Core
-google-genai>=0.3.0
+# Google ADK (Agents Development Kit)
+google-adk>=0.1.0
 
-# Tools and utilities
-google-search-results>=2.4.2
+# Google Generative AI (for embeddings)
+google-generativeai>=0.3.0
+
+# Additional utilities
 requests>=2.31.0
 python-dotenv>=1.0.0
 
 # Data handling
 pydantic>=2.0.0
 jsonschema>=4.20.0
+
+# Search and retrieval
+rank-bm25>=0.2.2
+
+# Optional: Reranking (graceful fallback if not installed)
+cohere>=5.0.0  # Optional - for cross-source reranking
 
 # Observability
 structlog>=24.1.0

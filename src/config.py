@@ -7,6 +7,10 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Set GOOGLE_API_KEY for ADK (it reads from environment)
+if os.getenv("GOOGLE_GENAI_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_GENAI_API_KEY")
+
 
 class Config:
     """Application configuration."""
@@ -14,6 +18,7 @@ class Config:
     # API Keys - loaded from environment
     GOOGLE_GENAI_API_KEY = os.getenv("GOOGLE_GENAI_API_KEY", "")
     SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "")
+    COHERE_API_KEY = os.getenv("COHERE_API_KEY", "")  # Optional - for reranking
 
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

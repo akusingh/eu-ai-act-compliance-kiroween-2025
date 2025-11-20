@@ -6,7 +6,8 @@ from typing import Dict, List, Any, Tuple
 from pathlib import Path
 
 from src.models import RiskTier
-from src.orchestrator import ComplianceOrchestrator
+# Using SequentialAgent-based orchestrator for evaluation
+from src.sequential_orchestrator import ComplianceOrchestrator
 from src.observability import metrics_collector
 
 
@@ -196,18 +197,26 @@ class AgentEvaluator:
         Returns:
             Dictionary with evaluation results
         """
+        import time
+        
         logger.info("Starting agent evaluation")
         
         successful = 0
         failed = 0
         
-        for scenario in self.scenarios:
+        for idx, scenario in enumerate(self.scenarios):
             try:
                 # Run assessment
                 result = self.orchestrator.assess_system(scenario.system_info)
                 
-                # Extract risk tier
-                actual_tier_str = result["assessment"]["risk_tier"]
+                # Extract risk tier (try both 'tier' and 'risk_tier' for backwards compatibility)
+                assessment = result.get("assessment", {})
+                actual_tier_str = assessment.get("tier") or assessment.get("risk_tier")
+                if not actual_tier_str:
+                    raise KeyError(f"No risk tier found in assessment: {assessment.keys()}")
+                
+                # Convert to lowercase with underscores (e.g., "LIMITED_RISK" -> "limited_risk")
+                actual_tier_str = actual_tier_str.lower().replace(" ", "_").replace("-", "_")
                 scenario.actual_risk_tier = RiskTier(actual_tier_str)
                 
                 # Check if correct
@@ -228,9 +237,18 @@ class AgentEvaluator:
                 
                 # Store result
                 result_data = scenario.to_dict()
-                result_data["risk_score"] = result["assessment"]["risk_score"]
-                result_data["confidence"] = result["assessment"]["confidence_score"]
+                assessment = result.get("assessment", {})
+                result_data["risk_score"] = assessment.get("score", 0)
+                result_data["confidence"] = assessment.get("confidence", 0.0)
+                
                 self.results.append(result_data)
+                
+                # Add delay between assessments to avoid rate limits
+                # Each assessment uses ~13-15 API requests, rate limit is 15/min
+                # Need to wait 90 seconds for rate limit window to reset (extra buffer)
+                if idx < len(self.scenarios) - 1:  # Don't delay after last scenario
+                    logger.info("⏳ Waiting 90 seconds for API rate limit to reset...")
+                    time.sleep(90)
                 
             except Exception as e:
                 failed += 1
@@ -258,7 +276,7 @@ class AgentEvaluator:
         metrics_collector.record_metric("evaluation_accuracy", accuracy)
         
         return evaluation_summary
-
+    
     def get_evaluation_report(self) -> str:
         """Generate human-readable evaluation report.
         

@@ -15,16 +15,21 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Run agent evaluation against test scenarios."""
+    """Run agent evaluation against test scenarios using ADK."""
     print("\n" + "="*70)
-    print("EU AI Act Compliance Agent - Evaluation Suite")
+    print("EU AI Act Compliance Agent - Evaluation Suite (ADK)")
+    print("Framework: Google ADK + Gemini 2.0 Flash")
     print("="*70 + "\n")
     
-    logger.info("Starting agent evaluation")
+    logger.info("Starting ADK agent evaluation")
     
-    # Validate configuration
-    if not Config.validate():
-        logger.warning("Some APIs not configured - using mock implementations")
+    # Validate Gemini API key (required for ADK)
+    if not Config.GOOGLE_GENAI_API_KEY:
+        logger.error("GOOGLE_GENAI_API_KEY not set!")
+        print("\n⚠️  ERROR: GOOGLE_GENAI_API_KEY not configured in .env")
+        print("ADK evaluation requires Gemini API key.")
+        print("Get one at: https://aistudio.google.com/\n")
+        return False
     
     # Initialize evaluator
     evaluator = AgentEvaluator()
@@ -64,7 +69,8 @@ def main():
     print(f"Performance metrics saved to {metrics_file}")
     
     print("\n" + "="*70)
-    print("Evaluation complete!")
+    print("ADK Evaluation complete!")
+    print("Framework: Google ADK with Gemini 2.0 Flash")
     print("="*70 + "\n")
     
     return evaluation_results["passed"] == evaluation_results["total_scenarios"]
