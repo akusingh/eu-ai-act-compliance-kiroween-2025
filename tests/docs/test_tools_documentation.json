@@ -1,0 +1,113 @@
+{
+  "test_module": "test_tools",
+  "file_path": "tests/test_tools.py",
+  "generated_at": "2025-11-18T13:08:55.293674",
+  "total_test_classes": 2,
+  "total_test_cases": 18,
+  "test_classes": [
+    {
+      "class_name": "TestComplianceScoringTool",
+      "description": "Test suite for ComplianceScoringTool.",
+      "test_cases": [
+        {
+          "test_name": "test_confidence_score_in_valid_range",
+          "description": "Test that confidence scores are between 0 and 1.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_framework_has_required_patterns",
+          "description": "Test that framework contains all required pattern categories.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_high_risk_system_appropriate_score",
+          "description": "Test that high-risk systems get scores in 55-84 range.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_json_parsing_error_handling",
+          "description": "Test that tool handles invalid JSON gracefully.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_limited_risk_system_appropriate_score",
+          "description": "Test that limited-risk systems get scores in 25-54 range.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_minimal_risk_system_low_score",
+          "description": "Test that minimal-risk systems get low scores (< 25).",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_pattern_matching_high_risk",
+          "description": "Test that high-risk patterns are correctly identified.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_pattern_matching_prohibited",
+          "description": "Test that prohibited patterns are correctly identified.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_prohibited_system_high_score",
+          "description": "Test that prohibited systems get very high risk scores (85+).",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_result_contains_required_fields",
+          "description": "Test that result contains all required fields.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_score_range_bounds",
+          "description": "Test that risk scores are within valid range (0-100).",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_tool_initialization",
+          "description": "Test that tool initializes correctly with proper name and description.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 12
+    },
+    {
+      "class_name": "TestEUAIActReferenceTool",
+      "description": "Test suite for EUAIActReferenceTool.",
+      "test_cases": [
+        {
+          "test_name": "test_article_extraction",
+          "description": "Test that specific articles can be extracted.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_empty_query_handling",
+          "description": "Test handling of empty queries.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_invalid_article_number",
+          "description": "Test handling of invalid article numbers.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_keyword_search",
+          "description": "Test keyword-based search functionality.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_multiple_articles_extraction",
+          "description": "Test extracting multiple articles at once.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_tool_initialization",
+          "description": "Test that tool initializes correctly.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 6
+    }
+  ]
+}

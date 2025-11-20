@@ -1,0 +1,142 @@
+{
+  "test_module": "test_models",
+  "file_path": "tests/test_models.py",
+  "generated_at": "2025-11-18T13:08:53.175402",
+  "total_test_classes": 4,
+  "total_test_cases": 21,
+  "test_classes": [
+    {
+      "class_name": "TestRiskTierEnum",
+      "description": "Test suite for RiskTier enum.",
+      "test_cases": [
+        {
+          "test_name": "test_all_risk_tiers_defined",
+          "description": "Test that all four risk tiers are defined.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_invalid_risk_tier_raises_error",
+          "description": "Test that invalid risk tier string raises ValueError.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_comparison",
+          "description": "Test that risk tiers can be compared.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_from_string",
+          "description": "Test creating RiskTier from string values.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_values_lowercase",
+          "description": "Test that risk tier values are lowercase with underscores.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 5
+    },
+    {
+      "class_name": "TestAISystemProfile",
+      "description": "Test suite for AISystemProfile model.",
+      "test_cases": [
+        {
+          "test_name": "test_profile_boolean_fields",
+          "description": "Test boolean field validation.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_profile_requires_all_fields",
+          "description": "Test that all required fields must be provided.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_profile_with_minimal_data_types",
+          "description": "Test profile with single data type.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_valid_profile_creation",
+          "description": "Test creating a valid AISystemProfile.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 4
+    },
+    {
+      "class_name": "TestComplianceAssessment",
+      "description": "Test suite for ComplianceAssessment model.",
+      "test_cases": [
+        {
+          "test_name": "test_optional_fields_defaults",
+          "description": "Test that optional fields have proper defaults.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_score_at_boundaries",
+          "description": "Test risk scores at exact boundary values.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_score_validation_bounds",
+          "description": "Test that risk score must be between 0 and 100.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_score_consistency_high_risk",
+          "description": "Test high risk tier with appropriate score.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_score_consistency_limited_risk",
+          "description": "Test limited risk tier with appropriate score.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_score_consistency_minimal_risk",
+          "description": "Test minimal risk tier with appropriate score.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_score_consistency_prohibited",
+          "description": "Test prohibited risk tier with appropriate score.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_valid_assessment_creation",
+          "description": "Test creating a valid ComplianceAssessment.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 8
+    },
+    {
+      "class_name": "TestModelSerialization",
+      "description": "Test suite for model serialization and deserialization.",
+      "test_cases": [
+        {
+          "test_name": "test_assessment_from_dict",
+          "description": "Test creating ComplianceAssessment from dictionary.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_assessment_to_dict",
+          "description": "Test converting ComplianceAssessment to dictionary.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_profile_to_dict",
+          "description": "Test converting AISystemProfile to dictionary.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_json_serialization",
+          "description": "Test that RiskTier serializes to string in JSON.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 4
+    }
+  ]
+}

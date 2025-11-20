@@ -1,0 +1,130 @@
+// End-to-End Data Flow
+// Render with: dot -Tpng 06_data_flow.dot -o 06_data_flow.png
+
+digraph DataFlow {
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Title
+    label="End-to-End Data Flow - From Input to Assessment";
+    labelloc="t";
+    fontsize=20;
+    fontname="Arial Bold";
+    
+    // Stage 1: Input
+    subgraph cluster_input {
+        label="Stage 1: Input";
+        style=filled;
+        fillcolor=lightyellow;
+        
+        user_input [label="User Provides:\n\n• System name\n• Purpose\n• Sector\n• Data types\n• Decision impact\n• Human oversight\n• Consequences", fillcolor=wheat];
+        
+        profile [label="AISystemProfile\n(Pydantic model)", fillcolor=lightblue];
+        
+        user_input -> profile [label="validate"];
+    }
+    
+    // Stage 2: Research
+    subgraph cluster_research {
+        label="Stage 2: Parallel Research";
+        style=filled;
+        fillcolor=lightcyan;
+        
+        query [label="Extract Keywords\n+ Context", fillcolor=skyblue];
+        
+        search1 [label="Search Recitals\n(477 chunks)", fillcolor=lightgreen];
+        search2 [label="Search Articles\n(562 chunks)", fillcolor=lightgreen];
+        search3 [label="Search Annexes\n(84 chunks)", fillcolor=lightgreen];
+        
+        results [label="Combined Results\n(with sources)", fillcolor=wheat];
+        
+        query -> search1 [label="parallel"];
+        query -> search2 [label="parallel"];
+        query -> search3 [label="parallel"];
+        
+        search1 -> results;
+        search2 -> results;
+        search3 -> results;
+    }
+    
+    // Stage 3: Processing
+    subgraph cluster_process {
+        label="Stage 3: Legal Processing";
+        style=filled;
+        fillcolor=lavender;
+        
+        aggregate [label="Aggregate\n\n• Remove duplicates\n• Synthesize findings\n• Create summary", fillcolor=skyblue];
+        
+        filter [label="Filter\n\n• Check relevance\n• Prioritize articles\n• Remove noise", fillcolor=skyblue];
+        
+        relevant [label="Relevant Articles\n(filtered list)", fillcolor=wheat];
+        
+        aggregate -> filter;
+        filter -> relevant;
+    }
+    
+    // Stage 4: Classification
+    subgraph cluster_classify {
+        label="Stage 4: Risk Classification";
+        style=filled;
+        fillcolor=lightyellow;
+        
+        score [label="Calculate Score\n\n• Purpose (30%)\n• Data (25%)\n• Impact (25%)\n• Oversight (20%)", fillcolor=orange];
+        
+        adjust [label="Contextual Adjustment\n\n• Check patterns\n• Apply modifiers\n• Determine tier", fillcolor=orange];
+        
+        classify [label="Risk Tier\n+ Score\n+ Confidence", fillcolor=wheat];
+        
+        score -> adjust;
+        adjust -> classify;
+    }
+    
+    // Stage 5: Analysis
+    subgraph cluster_analyze {
+        label="Stage 5: Gap Analysis";
+        style=filled;
+        fillcolor=lightcyan;
+        
+        gaps [label="Identify Gaps\n\n• Missing requirements\n• Unclear areas\n• Compliance risks", fillcolor=skyblue];
+        
+        recommend [label="Generate\nRecommendations\n\n• Action items\n• Best practices\n• Next steps", fillcolor=skyblue];
+        
+        gaps -> recommend;
+    }
+    
+    // Stage 6: Output
+    subgraph cluster_output {
+        label="Stage 6: Report Generation";
+        style=filled;
+        fillcolor=lightgreen;
+        
+        report [label="Compliance Assessment\n(Pydantic model)", fillcolor=wheat];
+        
+        format [label="Formatted Output:\n\n✓ Risk classification\n✓ Risk score\n✓ Confidence level\n✓ Relevant articles\n✓ Compliance gaps\n✓ Recommendations\n✓ Processing metadata", fillcolor=lightgreen];
+        
+        report -> format;
+    }
+    
+    // Main Flow
+    profile -> query;
+    results -> aggregate;
+    relevant -> score;
+    classify -> gaps;
+    recommend -> report;
+    
+    // Data transformations
+    transform1 [label="Dict → Model", shape=plaintext, fontcolor=blue];
+    transform2 [label="Text → Vectors", shape=plaintext, fontcolor=blue];
+    transform3 [label="Results → Summary", shape=plaintext, fontcolor=blue];
+    transform4 [label="Articles → Features", shape=plaintext, fontcolor=blue];
+    transform5 [label="Features → Score", shape=plaintext, fontcolor=blue];
+    transform6 [label="Analysis → Report", shape=plaintext, fontcolor=blue];
+    
+    profile -> transform1 [style=invis];
+    query -> transform2 [style=invis];
+    results -> transform3 [style=invis];
+    relevant -> transform4 [style=invis];
+    classify -> transform5 [style=invis];
+    recommend -> transform6 [style=invis];
+}

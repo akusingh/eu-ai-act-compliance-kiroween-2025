@@ -1,0 +1,114 @@
+// Risk Classification Logic
+// Render with: dot -Tpng 04_risk_classification.dot -o 04_risk_classification.png
+
+digraph RiskClassification {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Title
+    label="EU AI Act Risk Tier Classification";
+    labelloc="t";
+    fontsize=20;
+    fontname="Arial Bold";
+    
+    // Input
+    input [label="AI System Profile\n+ Relevant Articles", shape=note, fillcolor=lightyellow];
+    
+    // Scoring Tool
+    tool [label="Compliance Scoring Tool\n(ComplianceScoringTool)", fillcolor=lightcoral, penwidth=2];
+    
+    // Base Score Calculation
+    subgraph cluster_base {
+        label="Base Score Calculation (0-100)";
+        style=filled;
+        fillcolor=lightcyan;
+        
+        factor1 [label="Purpose Alignment\n(weight: 0.30)", fillcolor=lightblue];
+        factor2 [label="Data Sensitivity\n(weight: 0.25)", fillcolor=lightblue];
+        factor3 [label="Decision Impact\n(weight: 0.25)", fillcolor=lightblue];
+        factor4 [label="Human Oversight\n(weight: 0.20)", fillcolor=lightblue];
+        
+        base_score [label="Base Score\nΣ(factor × weight)", fillcolor=wheat];
+        
+        factor1 -> base_score;
+        factor2 -> base_score;
+        factor3 -> base_score;
+        factor4 -> base_score;
+    }
+    
+    // Contextual Adjustments
+    subgraph cluster_adjust {
+        label="Contextual Adjustments";
+        style=filled;
+        fillcolor=lightyellow;
+        
+        check1 [label="Prohibited Patterns?\n(biometric, social scoring)", shape=diamond, fillcolor=pink];
+        check2 [label="High-Risk Patterns?\n(critical infra, law enforcement)", shape=diamond, fillcolor=orange];
+        check3 [label="Limited-Risk Patterns?\n(chatbots, emotion detection)", shape=diamond, fillcolor=yellow];
+        
+        adjust1 [label="+40-50 points", fillcolor=red];
+        adjust2 [label="+30-40 points", fillcolor=orange];
+        adjust3 [label="+5-10 points", fillcolor=yellow];
+        
+        check1 -> adjust1 [label="Yes"];
+        check2 -> adjust2 [label="Yes"];
+        check3 -> adjust3 [label="Yes"];
+    }
+    
+    adjusted [label="Adjusted Score", fillcolor=wheat];
+    
+    // Tier Assignment
+    decision [label="Assign Risk Tier\nbased on Score", shape=diamond, fillcolor=lightcoral, penwidth=2];
+    
+    // Risk Tiers
+    subgraph cluster_tiers {
+        label="Risk Tier Classification";
+        style=filled;
+        fillcolor=lavender;
+        
+        tier1 [label="UNACCEPTABLE_RISK\n(PROHIBITED)\n\nScore: 80-100\n\nExamples:\n• Social scoring\n• Real-time biometrics\n• Subliminal manipulation", fillcolor=red, fontcolor=white];
+        
+        tier2 [label="HIGH_RISK\n\nScore: 55-79\n\nExamples:\n• Critical infrastructure\n• Law enforcement\n• Employment decisions\n• Credit scoring", fillcolor=orange];
+        
+        tier3 [label="LIMITED_RISK\n\nScore: 25-54\n\nExamples:\n• Chatbots\n• Emotion detection\n• Deepfake detection\n• Content moderation", fillcolor=yellow];
+        
+        tier4 [label="MINIMAL_RISK\n\nScore: 0-24\n\nExamples:\n• Spam filters\n• Music recommendations\n• Game AI\n• Basic automation", fillcolor=lightgreen];
+    }
+    
+    // Confidence Score
+    confidence [label="Calculate Confidence\n(0.0-1.0)\n\nBased on:\n• Article relevance\n• Score clarity\n• Pattern matches", fillcolor=skyblue];
+    
+    // Output
+    output [label="Classification Result\n\n• Risk Tier\n• Risk Score\n• Confidence\n• Reasoning", shape=note, fillcolor=lightgreen, penwidth=2];
+    
+    // Flow
+    input -> tool;
+    tool -> factor1;
+    tool -> factor2;
+    tool -> factor3;
+    tool -> factor4;
+    
+    base_score -> check1;
+    check1 -> check2 [label="No"];
+    check2 -> check3 [label="No"];
+    check3 -> adjusted [label="No"];
+    
+    adjust1 -> adjusted;
+    adjust2 -> adjusted;
+    adjust3 -> adjusted;
+    
+    adjusted -> decision;
+    
+    decision -> tier1 [label="≥80"];
+    decision -> tier2 [label="55-79"];
+    decision -> tier3 [label="25-54"];
+    decision -> tier4 [label="0-24"];
+    
+    tier1 -> confidence;
+    tier2 -> confidence;
+    tier3 -> confidence;
+    tier4 -> confidence;
+    
+    confidence -> output;
+}

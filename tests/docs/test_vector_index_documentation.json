@@ -1,0 +1,114 @@
+{
+  "test_module": "test_vector_index",
+  "file_path": "tests/test_vector_index.py",
+  "generated_at": "2025-11-18T13:08:55.441169",
+  "total_test_classes": 3,
+  "total_test_cases": 15,
+  "test_classes": [
+    {
+      "class_name": "TestVectorIndexTool",
+      "description": "Test suite for VectorIndexTool.",
+      "test_cases": [
+        {
+          "test_name": "test_default_top_k_value",
+          "description": "Test that default top_k is 5 when not specified.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_empty_query_handling",
+          "description": "Test handling of empty query string.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_invalid_section_raises_error",
+          "description": "Test that invalid section raises ValueError.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_metadata_inclusion",
+          "description": "Test that metadata is included in results.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_result_formatting",
+          "description": "Test that results are properly formatted.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_search_query_structure",
+          "description": "Test that search accepts properly formatted queries.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_tool_initialization_annexes",
+          "description": "Test tool initialization with annexes section.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_tool_initialization_articles",
+          "description": "Test tool initialization with articles section.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_tool_initialization_recitals",
+          "description": "Test tool initialization with recitals section.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_top_k_parameter_respected",
+          "description": "Test that top_k parameter limits results.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 10
+    },
+    {
+      "class_name": "TestVectorIndexCaching",
+      "description": "Test suite for vector index caching functionality.",
+      "test_cases": [
+        {
+          "test_name": "test_cache_directory_structure",
+          "description": "Test that cache directory has expected structure.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_index_file_naming",
+          "description": "Test that index files follow expected naming convention.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 2
+    },
+    {
+      "class_name": "TestVectorSearchIntegration",
+      "description": "Integration tests for vector search functionality.",
+      "test_cases": [
+        {
+          "test_name": "test_real_search_annexes",
+          "description": "Test real search on annexes if cache is available.",
+          "test_type": "unit",
+          "markers": [
+            "skipif"
+          ]
+        },
+        {
+          "test_name": "test_real_search_articles",
+          "description": "Test real search on articles if cache is available.",
+          "test_type": "unit",
+          "markers": [
+            "skipif"
+          ]
+        },
+        {
+          "test_name": "test_real_search_recitals",
+          "description": "Test real search on recitals if cache is available.",
+          "test_type": "unit",
+          "markers": [
+            "skipif"
+          ]
+        }
+      ],
+      "test_case_count": 3
+    }
+  ]
+}

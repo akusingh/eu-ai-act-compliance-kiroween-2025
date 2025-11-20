@@ -1,0 +1,85 @@
+// System Architecture Overview
+// Render with: dot -Tpng 01_system_architecture.dot -o 01_system_architecture.png
+
+digraph SystemArchitecture {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fillcolor=lightblue, fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Title
+    label="EU AI Act Compliance Agent - System Architecture";
+    labelloc="t";
+    fontsize=20;
+    fontname="Arial Bold";
+    
+    // User Input
+    user [label="User Input\n(AI System Description)", shape=note, fillcolor=lightyellow];
+    
+    // Main Orchestrator
+    orchestrator [label="Sequential Orchestrator\n(5-Agent Pipeline)", fillcolor=lightcoral, penwidth=2];
+    
+    // Data Sources
+    subgraph cluster_data {
+        label="Knowledge Base";
+        style=filled;
+        fillcolor=lightgray;
+        
+        recitals [label="EU AI Act\nRecitals\n(477 chunks)", fillcolor=wheat];
+        articles [label="EU AI Act\nArticles\n(562 chunks)", fillcolor=wheat];
+        annexes [label="EU AI Act\nAnnexes\n(84 chunks)", fillcolor=wheat];
+    }
+    
+    // Vector Indexes
+    subgraph cluster_vectors {
+        label="Vector Indexes (Hybrid Search)";
+        style=filled;
+        fillcolor=lightcyan;
+        
+        vector [label="Vector Search\n(Gemini Embeddings)", fillcolor=lightgreen];
+        bm25 [label="BM25 Keyword Search", fillcolor=lightgreen];
+        rrf [label="RRF Fusion\n(k=60)", fillcolor=lightgreen];
+        cohere [label="Cohere Rerank v3\n(Optional)", fillcolor=orange];
+    }
+    
+    // Agents
+    subgraph cluster_agents {
+        label="5-Agent Sequential Pipeline";
+        style=filled;
+        fillcolor=lavender;
+        
+        agent1 [label="1. Parallel Research Team\n(3 sub-agents)", fillcolor=skyblue];
+        agent2 [label="2. Legal Aggregator", fillcolor=skyblue];
+        agent3 [label="3. Relevance Checker", fillcolor=skyblue];
+        agent4 [label="4. Compliance Classifier", fillcolor=skyblue];
+        agent5 [label="5. Report Generator", fillcolor=skyblue];
+    }
+    
+    // Output
+    output [label="Compliance Assessment\n• Risk Tier\n• Score (0-100)\n• Confidence\n• Relevant Articles\n• Gaps & Recommendations", shape=note, fillcolor=lightgreen];
+    
+    // Flow
+    user -> orchestrator [label="Submit"];
+    
+    recitals -> vector;
+    articles -> vector;
+    annexes -> vector;
+    
+    vector -> rrf;
+    bm25 -> rrf;
+    rrf -> cohere [label="if API key"];
+    cohere -> agent1 [label="reranked results"];
+    rrf -> agent1 [label="fused results\n(no rerank)"];
+    
+    orchestrator -> agent1 [label="1. Initialize"];
+    agent1 -> agent2 [label="2. Research complete"];
+    agent2 -> agent3 [label="3. Legal summary"];
+    agent3 -> agent4 [label="4. Filtered articles"];
+    agent4 -> agent5 [label="5. Classification"];
+    agent5 -> output [label="6. Final report"];
+    
+    output -> user [label="Return"];
+    
+    // Model info
+    model [label="Gemini 2.0 Flash\n(Google ADK)", shape=cylinder, fillcolor=gold];
+    model -> orchestrator [style=dashed, label="powers all agents"];
+}

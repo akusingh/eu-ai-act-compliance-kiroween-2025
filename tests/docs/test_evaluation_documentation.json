@@ -1,0 +1,124 @@
+{
+  "test_module": "test_evaluation",
+  "file_path": "tests/test_evaluation.py",
+  "generated_at": "2025-11-18T13:08:55.452214",
+  "total_test_classes": 4,
+  "total_test_cases": 15,
+  "test_classes": [
+    {
+      "class_name": "TestEvaluationScenario",
+      "description": "Test suite for EvaluationScenario.",
+      "test_cases": [
+        {
+          "test_name": "test_scenario_creation",
+          "description": "Test creating a basic evaluation scenario.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_scenario_score_range_validation",
+          "description": "Test that score range makes sense.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_scenario_with_optional_fields",
+          "description": "Test scenario with optional data_types and decision_impact.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 3
+    },
+    {
+      "class_name": "TestAgentEvaluator",
+      "description": "Test suite for AgentEvaluator.",
+      "test_cases": [
+        {
+          "test_name": "test_evaluate_single_scenario_error_handling",
+          "description": "Test that errors in scenario evaluation are handled.",
+          "test_type": "unit",
+          "markers": [
+            "asyncio"
+          ],
+          "async": true
+        },
+        {
+          "test_name": "test_evaluate_single_scenario_success",
+          "description": "Test successful single scenario evaluation.",
+          "test_type": "unit",
+          "markers": [
+            "asyncio"
+          ],
+          "async": true
+        },
+        {
+          "test_name": "test_evaluator_initialization",
+          "description": "Test that evaluator initializes correctly.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_results_aggregation",
+          "description": "Test that results are properly aggregated.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_match_evaluation",
+          "description": "Test that risk tier matching is evaluated correctly.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_score_range_evaluation",
+          "description": "Test that score range checking works correctly.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 6
+    },
+    {
+      "class_name": "TestEvaluationMetrics",
+      "description": "Test suite for evaluation metrics calculation.",
+      "test_cases": [
+        {
+          "test_name": "test_accuracy_calculation",
+          "description": "Test accuracy metric calculation.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_confidence_score_aggregation",
+          "description": "Test aggregation of confidence scores.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_risk_tier_confusion_matrix",
+          "description": "Test confusion matrix for risk tier predictions.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_score_difference_calculation",
+          "description": "Test calculation of score differences.",
+          "test_type": "unit"
+        }
+      ],
+      "test_case_count": 4
+    },
+    {
+      "class_name": "TestScenarioExecution",
+      "description": "Test suite for scenario execution flow.",
+      "test_cases": [
+        {
+          "test_name": "test_rate_limiting_delay",
+          "description": "Test that rate limiting delay is applied.",
+          "test_type": "unit"
+        },
+        {
+          "test_name": "test_sequential_scenario_execution",
+          "description": "Test that scenarios are executed sequentially.",
+          "test_type": "unit",
+          "markers": [
+            "asyncio"
+          ],
+          "async": true
+        }
+      ],
+      "test_case_count": 2
+    }
+  ]
+}

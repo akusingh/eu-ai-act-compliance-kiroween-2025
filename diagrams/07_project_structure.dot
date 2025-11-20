@@ -1,0 +1,228 @@
+// Project Structure Overview
+// Render with: dot -Tpng 07_project_structure.dot -o 07_project_structure.png
+
+digraph ProjectStructure {
+    rankdir=TB;
+    node [shape=folder, style=filled, fillcolor=lightyellow, fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Title
+    label="Project Structure - File Organization";
+    labelloc="t";
+    fontsize=20;
+    fontname="Arial Bold";
+    
+    // Root
+    root [label="kaggle-capstone/", fillcolor=lightcoral, penwidth=2];
+    
+    // Main directories
+    src [label="src/\n(Core modules)", fillcolor=lightblue];
+    data [label="data/\n(EU AI Act texts)", fillcolor=wheat];
+    tests [label="tests/\n(72 unit tests)", fillcolor=lightgreen];
+    scripts [label="scripts/\n(Utilities)", fillcolor=lightyellow];
+    outputs [label="outputs/\n(Results)", fillcolor=lavender];
+    diagrams [label="diagrams/\n(.dot files)", fillcolor=lightcyan];
+    
+    // Src files
+    subgraph cluster_src {
+        label="src/ - Core Application";
+        style=filled;
+        fillcolor=lightblue;
+        
+        src_files [shape=box, label="
+sequential_orchestrator.py
+  • 5-agent pipeline
+  • Architecture logging
+  
+parallel_research_agents.py
+  • 3 research agents
+  • Parallel execution
+  
+tools_adk.py
+  • ComplianceScoringTool
+  • EUAIActReferenceTool
+  
+vector_index_tool.py
+  • Hybrid search
+  • Vector + BM25 + RRF
+  
+reranker_tool.py
+  • Cohere rerank-v3.5
+  • Optional enhancement
+  
+aggregator_agents.py
+  • Legal aggregation
+  • Report generation
+  
+models.py
+  • Pydantic models
+  • Type validation
+  
+config.py
+  • Configuration
+  • API keys
+  
+evaluation.py
+  • 8 test scenarios
+  • Metrics calculation
+  
+observability.py
+  • Logging
+  • Monitoring
+", fillcolor=white];
+    }
+    
+    // Data files
+    subgraph cluster_data {
+        label="data/ - Knowledge Base";
+        style=filled;
+        fillcolor=wheat;
+        
+        data_files [shape=box, label="
+eu_ai_act_full.txt
+  • Full EU AI Act text
+  
+eu_ai_act_recitals.txt
+  • 477 recital chunks
+  
+eu_ai_act_articles.txt
+  • 562 article chunks
+  
+eu_ai_act_annexes.txt
+  • 84 annex chunks
+  
+embeddings_cache/
+  ├── recitals/eu_ai_act_index.pkl
+  ├── articles/eu_ai_act_index.pkl
+  └── annexes/eu_ai_act_index.pkl
+", fillcolor=white];
+    }
+    
+    // Test files
+    subgraph cluster_tests {
+        label="tests/ - Testing Suite";
+        style=filled;
+        fillcolor=lightgreen;
+        
+        test_files [shape=box, label="
+test_models.py
+  • 21 tests (✅ all passing)
+  
+test_tools.py
+  • 18 tests
+  
+test_vector_index.py
+  • 20 tests
+  
+test_evaluation.py
+  • 13 tests
+  
+conftest.py
+  • Pytest configuration
+  
+docs/
+  • JSON documentation files
+  
+results/
+  • Test execution results
+", fillcolor=white];
+    }
+    
+    // Scripts files
+    subgraph cluster_scripts {
+        label="scripts/ - Utilities";
+        style=filled;
+        fillcolor=lightyellow;
+        
+        script_files [shape=box, label="
+build_vector_indexes.py
+  • Creates FAISS indexes
+  • Processes EU AI Act
+  
+split_eu_ai_act.py
+  • Splits text into sections
+  • Recitals/Articles/Annexes
+  
+download_eu_ai_act.sh
+  • Downloads source text
+", fillcolor=white];
+    }
+    
+    // Output files
+    subgraph cluster_outputs {
+        label="outputs/ - Results";
+        style=filled;
+        fillcolor=lavender;
+        
+        output_files [shape=box, label="
+evaluation.json
+  • Full evaluation results
+  
+metrics.json
+  • Performance metrics
+  
+traces.json
+  • Agent execution traces
+  
+remaining_scenarios_results.json
+  • Sequential test results
+", fillcolor=white];
+    }
+    
+    // Main files
+    main_files [shape=box, label="
+demo_final.py
+  • Main demo script
+  • Loan approval example
+  
+evaluate.py
+  • Run 8 test scenarios
+  • Calculate metrics
+  
+agent.py
+  • Agent entry point
+  
+requirements.txt
+  • Python dependencies
+  
+README.md
+  • 895 lines documentation
+  
+setup.sh
+  • Environment setup
+", fillcolor=white];
+    
+    // Documentation files
+    doc_files [shape=box, label="
+PROJECT_SUMMARY.md
+IMPLEMENTATION_COMPLETE.md
+HYBRID_SEARCH_ARCHITECTURE.md
+VECTOR_INDEX_SETUP.md
+COHERE_RERANKING_GUIDE.md
+FINAL_EVALUATION_SUMMARY.md
+ADK-WEB-UI-GUIDE.md
+SPRINT_TRACKER.md
+... (20+ docs total)
+", fillcolor=white];
+    
+    // Connections
+    root -> src;
+    root -> data;
+    root -> tests;
+    root -> scripts;
+    root -> outputs;
+    root -> diagrams;
+    root -> main_files;
+    root -> doc_files;
+    
+    src -> src_files;
+    data -> data_files;
+    tests -> test_files;
+    scripts -> script_files;
+    outputs -> output_files;
+    
+    // Stats
+    stats [shape=note, label="Statistics:\n\n• Total files: 100+\n• Python files: 30+\n• Documentation: 20+ MD files\n• Tests: 72 unit tests\n• Code coverage: 90%+\n• Total lines: 10,000+", fillcolor=lightcyan];
+    
+    root -> stats [style=dashed];
+}

@@ -1,0 +1,86 @@
+// Hybrid Search Architecture
+// Render with: dot -Tpng 03_hybrid_search.dot -o 03_hybrid_search.png
+
+digraph HybridSearch {
+    rankdir=TB;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Title
+    label="Hybrid Search Architecture - Vector + BM25 + RRF";
+    labelloc="t";
+    fontsize=20;
+    fontname="Arial Bold";
+    
+    // Query
+    query [label="User Query\n(AI system description)", shape=note, fillcolor=lightyellow];
+    
+    // Parallel search paths
+    subgraph cluster_vector {
+        label="Path 1: Vector Search";
+        style=filled;
+        fillcolor=lightcyan;
+        
+        embed [label="Gemini Embeddings\n(text-embedding-004)", fillcolor=lightblue];
+        vec_index [label="FAISS Index\n1,123 chunks", fillcolor=lightblue];
+        vec_results [label="Top K Results\n(semantic similarity)", fillcolor=lightgreen];
+        
+        embed -> vec_index [label="query vector"];
+        vec_index -> vec_results [label="cosine similarity"];
+    }
+    
+    subgraph cluster_bm25 {
+        label="Path 2: Keyword Search";
+        style=filled;
+        fillcolor=lightyellow;
+        
+        tokenize [label="Tokenization", fillcolor=wheat];
+        bm25_index [label="BM25Okapi Index\n1,123 chunks", fillcolor=wheat];
+        bm25_results [label="Top K Results\n(keyword match)", fillcolor=lightgreen];
+        
+        tokenize -> bm25_index [label="tokens"];
+        bm25_index -> bm25_results [label="BM25 score"];
+    }
+    
+    // RRF Fusion
+    rrf [label="RRF Fusion\n(Reciprocal Rank Fusion)\n\nk=60\nCombines both rankings", fillcolor=orange, penwidth=2];
+    
+    fused [label="Fused Results\n(best of both)", fillcolor=lightgreen];
+    
+    // Conditional Reranking
+    decision [label="Cohere API\nKey Available?", shape=diamond, fillcolor=lightyellow];
+    
+    subgraph cluster_rerank {
+        label="Optional: Cohere Reranking";
+        style=filled;
+        fillcolor=lavender;
+        
+        rerank [label="Cohere rerank-v3.5\n\nCross-encoder model\nRe-scores all results", fillcolor=skyblue];
+        reranked [label="Reranked Results\n(optimized relevance)", fillcolor=lightgreen];
+        
+        rerank -> reranked;
+    }
+    
+    // Final output
+    final [label="Final Top K Results\nfor Agent Pipeline", shape=note, fillcolor=lightgreen, penwidth=2];
+    
+    // Flow
+    query -> embed;
+    query -> tokenize;
+    
+    vec_results -> rrf;
+    bm25_results -> rrf;
+    rrf -> fused;
+    
+    fused -> decision;
+    decision -> rerank [label="Yes\n(rerank=True)"];
+    decision -> final [label="No\n(rerank=False)"];
+    
+    reranked -> final;
+    
+    // Performance notes
+    note1 [label="Vector Search:\n• Semantic understanding\n• Context-aware\n• Handles synonyms", shape=note, fillcolor=lightcyan];
+    note2 [label="BM25 Search:\n• Exact keyword match\n• Fast\n• Handles rare terms", shape=note, fillcolor=lightyellow];
+    note3 [label="RRF Fusion:\n• Best of both worlds\n• No score normalization\n• Robust ranking", shape=note, fillcolor=orange];
+    note4 [label="Cohere Rerank:\n• +7.5% accuracy\n• Cross-source optimization\n• API cost: ~$0.01/query", shape=note, fillcolor=lavender];
+}

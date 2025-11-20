@@ -1,0 +1,85 @@
+// Agent Flow - Sequential Pipeline
+// Render with: dot -Tpng 02_agent_flow.dot -o 02_agent_flow.png
+
+digraph AgentFlow {
+    rankdir=LR;
+    node [shape=box, style="rounded,filled", fontname="Arial"];
+    edge [fontname="Arial", fontsize=10];
+    
+    // Title
+    label="5-Agent Sequential Pipeline - Data Flow";
+    labelloc="t";
+    fontsize=20;
+    fontname="Arial Bold";
+    
+    // Input
+    input [label="AI System Profile\n\n• Name\n• Purpose\n• Sector\n• Data Types\n• Decision Impact\n• Human Oversight\n• Consequences", shape=note, fillcolor=lightyellow];
+    
+    // Agent 1: Parallel Research
+    subgraph cluster_parallel {
+        label="Agent 1: Parallel Research Team";
+        style=filled;
+        fillcolor=lavender;
+        
+        research1 [label="Recitals\nResearcher", fillcolor=skyblue];
+        research2 [label="Articles\nResearcher", fillcolor=skyblue];
+        research3 [label="Annexes\nResearcher", fillcolor=skyblue];
+        
+        merge [label="Merge Results", shape=diamond, fillcolor=lightcoral];
+        
+        research1 -> merge;
+        research2 -> merge;
+        research3 -> merge;
+    }
+    
+    state1 [label="State 1:\nRaw Research\n(all 3 sources)", shape=parallelogram, fillcolor=wheat];
+    
+    // Agent 2: Legal Aggregator
+    agent2 [label="Agent 2:\nLegal Aggregator\n\n• Synthesize findings\n• Remove duplicates\n• Create legal summary", fillcolor=lightgreen];
+    
+    state2 [label="State 2:\nLegal Summary\n(aggregated)", shape=parallelogram, fillcolor=wheat];
+    
+    // Agent 3: Relevance Checker
+    agent3 [label="Agent 3:\nRelevance Checker\n\n• Filter articles\n• Assess applicability\n• Prioritize content", fillcolor=lightgreen];
+    
+    state3 [label="State 3:\nRelevant Articles\n(filtered)", shape=parallelogram, fillcolor=wheat];
+    
+    // Agent 4: Compliance Classifier
+    agent4 [label="Agent 4:\nCompliance Classifier\n\n• Calculate risk score\n• Determine tier\n• Assess confidence\n• Identify gaps", fillcolor=lightgreen];
+    
+    state4 [label="State 4:\nClassification\n(tier + score)", shape=parallelogram, fillcolor=wheat];
+    
+    // Agent 5: Report Generator
+    agent5 [label="Agent 5:\nReport Generator\n\n• Format assessment\n• Add recommendations\n• Structure output", fillcolor=lightgreen];
+    
+    // Output
+    output [label="Final Report\n\n• Risk Tier\n• Score (0-100)\n• Confidence\n• Relevant Articles\n• Compliance Gaps\n• Recommendations", shape=note, fillcolor=lightgreen];
+    
+    // Flow
+    input -> research1 [label="query"];
+    input -> research2 [label="query"];
+    input -> research3 [label="query"];
+    
+    merge -> state1;
+    state1 -> agent2;
+    agent2 -> state2;
+    state2 -> agent3;
+    agent3 -> state3;
+    state3 -> agent4;
+    agent4 -> state4;
+    state4 -> agent5;
+    agent5 -> output;
+    
+    // Timing annotations
+    time1 [label="~15-20s\n(parallel)", shape=plaintext, fontcolor=red];
+    time2 [label="~5s", shape=plaintext, fontcolor=red];
+    time3 [label="~3s", shape=plaintext, fontcolor=red];
+    time4 [label="~8-10s", shape=plaintext, fontcolor=red];
+    time5 [label="~3s", shape=plaintext, fontcolor=red];
+    
+    time1 -> merge [style=invis];
+    time2 -> agent2 [style=invis];
+    time3 -> agent3 [style=invis];
+    time4 -> agent4 [style=invis];
+    time5 -> agent5 [style=invis];
+}
