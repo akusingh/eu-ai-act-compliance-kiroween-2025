@@ -61,3 +61,19 @@ htmlcov/
 # Cache
 .pytest_cache/
 .mypy_cache/
+
+# Cleanup and temporary files
+.cleanup_backup/
+test_results.txt
+quota_check_output.log
+evaluation_run.log
+failed_scenarios_output.log
+
+# Old/temporary development files
+agent.py
+demo_final.py
+ADK-WEB-UI-GUIDE.md
+GOOGLE_SEARCH_USE_CASES.txt
+TEST_QUICK_REFERENCE.md
+TEST_RESULTS_JSON_GUIDE.md
+WARP.md
