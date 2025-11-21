@@ -8,7 +8,15 @@ logger = logging.getLogger(__name__)
 
 
 class EUAIActReferenceTool(BaseTool):
-    """Tool for accessing EU AI Act reference materials."""
+    """Tool for accessing EU AI Act reference materials.
+    
+    NOTE: This tool is fully implemented and tested but NOT USED in the active pipeline.
+    It has been superseded by VectorIndexTool which provides more comprehensive search
+    across all 1,123 document chunks. This class is retained for reference and potential
+    future use cases requiring quick article lookups without vector search.
+    
+    Current Status: Tested (5 unit tests pass) but unused in production pipeline.
+    """
     
     name = "eu_ai_act_reference"
     description = """Access EU AI Act articles and regulations. 
@@ -259,26 +267,44 @@ class ComplianceScoringTool(BaseTool):
         purpose = system_data.get("purpose", "").lower()
         combined_text = f"{use_case} {system_name} {purpose}"
         
-        # Check for prohibited patterns (highest priority)
+        # Check for prohibited patterns (highest priority) - return immediately
         if any(pattern in combined_text for pattern in self.framework["prohibited_patterns"]):
             return max(score, 85)
         
-        # Context-aware check for "deepfake" keyword
-        if "deepfake" in combined_text:
+        # Check for high-risk patterns - apply independently (not elif!)
+        if any(pattern in combined_text for pattern in self.framework["high_risk_patterns"]):
+            score = max(score, 60)
+            # Enforce maximum to stay in HIGH_RISK tier
+            if score >= 85:
+                score = 79
+        
+        # Context-aware check for "deepfake" keyword - independent check
+        if "deepfake" in combined_text or "synthetic media" in combined_text:
             # Detection systems are lower risk than generation systems
-            if any(word in combined_text for word in ["detection", "detect", "identify", "recognize"]):
+            detection_keywords = ["detection", "detect", "identify", "recognize"]
+            if any(word in combined_text for word in detection_keywords):
                 # Deepfake detection is limited-risk (transparency obligation)
                 score = max(score, 35)
                 if score >= 55:
                     score = 50  # Cap to LIMITED_RISK
             else:
-                # Deepfake generation is high-risk
-                score = max(score, 60)
-                if score >= 85:
-                    score = 79
+                # Generation case - check if human oversight exists
+                # Per EU AI Act Article 52: Supervised deepfake generation = LIMITED_RISK (transparency)
+                # Unsupervised deepfake generation = HIGH_RISK (misinformation danger)
+                has_oversight = system_data.get("human_oversight", False)
+                if has_oversight:
+                    # With human oversight: LIMITED_RISK (requires transparency disclosure)
+                    score = max(score, 35)
+                    if score >= 55:
+                        score = 50  # Cap to LIMITED_RISK
+                else:
+                    # Without oversight: HIGH_RISK (potential for misuse)
+                    score = max(score, 60)
+                    if score >= 85:
+                        score = 79
         
-        # Context-aware check for "recommendation" keyword  
-        elif "recommendation" in combined_text or "recommender" in combined_text:
+        # Context-aware check for "recommendation" keyword - independent check
+        if "recommendation" in combined_text or "recommender" in combined_text:
             # Entertainment/media recommendations are minimal risk
             if any(word in combined_text for word in ["music", "entertainment", "media", "song", "movie", "video", "game"]):
                 # Keep natural score, don't force upward
@@ -290,15 +316,10 @@ class ComplianceScoringTool(BaseTool):
                 if score >= 55:
                     score = 50
         
-        # Check for high-risk patterns (after specific context checks)
-        elif any(pattern in combined_text for pattern in self.framework["high_risk_patterns"]):
-            score = max(score, 60)
-            # Enforce maximum to stay in HIGH_RISK tier
-            if score >= 85:
-                score = 79
-        
-        # Check for limited-risk patterns (general case)
-        elif any(pattern in combined_text for pattern in self.framework["limited_risk_patterns"]):
+        # Check for limited-risk patterns (general case) - independent check
+        if any(pattern in combined_text for pattern in self.framework["limited_risk_patterns"]):
+            # Limited-risk patterns require minimum transparency obligations (Article 52, 53)
+            score = max(score, 25)  # Ensure minimum LIMITED_RISK score
             # Cap score to stay in LIMITED_RISK tier if it would exceed
             if score >= 55:
                 score = 50  # Cap to stay in LIMITED_RISK tier

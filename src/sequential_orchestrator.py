@@ -353,7 +353,13 @@ class ComplianceOrchestrator:
                         elif '```' in text:
                             text = text.split('```')[1].split('```')[0].strip()
                         try:
-                            report_data = json.loads(text)
+                            # Clean up JSON: remove trailing commas before closing braces/brackets
+                            cleaned_text = text
+                            import re
+                            # Remove trailing commas before closing brackets/braces
+                            cleaned_text = re.sub(r',(\s*[}\]])', r'\1', cleaned_text)
+                            
+                            report_data = json.loads(cleaned_text)
                             # Extract key results for logging
                             risk_class = report_data.get('risk_classification', {})
                             agent_score = risk_class.get('score', 0)
