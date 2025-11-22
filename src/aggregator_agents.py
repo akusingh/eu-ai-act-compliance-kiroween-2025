@@ -17,6 +17,21 @@ from google.adk.tools import FunctionTool, AgentTool
 from src.config import Config
 from src.reranker_tool import RerankerTool
 
+
+class RerankLegalFindingsAlias(RerankerTool):
+    """Alias wrapper exposing the reranker under the hallucinated name.
+
+    Some model outputs attempted to call a tool named 'RerankLegalFindings'.
+    The real tool is 'rerank_legal_findings'. This alias prevents tool-not-found
+    failures by registering the expected name while reusing the original logic.
+    """
+    name = "RerankLegalFindings"  # Alternate name the model hallucinated
+
+    def __init__(self):
+        super().__init__()
+        # Override name exposed to ADK registry
+        self.name = self.__class__.name
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,6 +71,7 @@ def create_aggregator_agent() -> Agent:
     """
     # Create reranker tool
     reranker_tool = RerankerTool()
+    reranker_alias = RerankLegalFindingsAlias()
     
     # Create relevance checker agent first (will be used as tool)
     relevance_checker = create_relevance_checker_agent()
@@ -69,9 +85,10 @@ Your role:
    - Annexes (specific lists and examples)
 
 2. Rerank all findings by relevance:
-   - Collect all text chunks from 3 sources
-   - Use rerank_legal_findings tool to prioritize by query relevance
-   - Focus on top 10 most relevant results
+    - Collect all text chunks from 3 sources
+    - CALL THE TOOL EXACTLY BY NAME: rerank_legal_findings
+    - Do NOT invent new names (e.g., 'RerankLegalFindings'). An alias is provided but use the documented name.
+    - Focus on top 10 most relevant results
 
 3. Synthesize into coherent legal analysis:
    - Combine findings into unified assessment
@@ -105,18 +122,31 @@ Output format (JSON):
   "research_quality": "Assessment from relevance checker"
 }
 
+Tool usage example:
+CALL rerank_legal_findings with JSON:
+{
+    "query": "<original_query>",
+    "documents": ["recital text", "article text", "annex text"],
+    "top_n": 10
+}
+
 Remember: Use the reranker first, then synthesize, then validate."""
     
+    agent_tools = [reranker_tool, reranker_alias, AgentTool(relevance_checker)]
     agent = Agent(
         name="LegalAggregator",
         model=Gemini(
             model="gemini-2.0-flash"
         ),
         instruction=instruction,
-        tools=[reranker_tool, AgentTool(relevance_checker)],
+        tools=agent_tools,
         output_key="legal_analysis",  # Store synthesized legal analysis in state
         description="Aggregates and synthesizes legal research from multiple sources with reranking"
     )
+    try:
+        logger.info("Aggregator tools registered: %s", [t.name for t in agent.tools])
+    except Exception:
+        logger.info("Aggregator tools registered (len=%d)", len(agent_tools))
     
     return agent
 

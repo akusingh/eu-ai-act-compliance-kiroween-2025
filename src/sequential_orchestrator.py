@@ -116,6 +116,33 @@ WORKFLOW EXAMPLE:
 3. Your output: {"risk_score": 35, "risk_tier": "limited_risk", ...}
    ↑ Copy these values directly from tool output!
 
+FUNCTION CALL FORMAT (MANDATORY):
+You MUST invoke the tool with a single function call named: compliance_scoring
+Arguments must be a JSON string of the system profile. Example:
+CALL compliance_scoring WITH INPUT:
+{"system_name":"Loan Approval System","use_case":"Creditworthiness assessment for loan decisions","data_types":["financial","personal_data"],"decision_impact":"significant","autonomous_decision":true,"human_oversight":true,"error_consequences":"Severe - affects credit access"}
+
+If you cannot find required fields, ask for them BEFORE calling the tool.
+DO NOT fabricate a score. If the tool does not return a score, call it again.
+
+MANDATORY OUTPUT JSON (after tool call):
+{
+    "risk_score": <number from tool score>,
+    "risk_tier": <string from tool classification>,
+    "relevant_articles": [<citations from legal_analysis>],
+    "compliance_gaps": ["..."],
+    "recommendations": ["..."],
+    "confidence": <0-1>,
+    "reasoning": "Step-by-step justification using tool output + articles"
+}
+
+ABSOLUTE RULES:
+1. Never output a score > 100 or < 0.
+2. Never change classification tier wording.
+3. If tool classification conflicts with legal_analysis text, KEEP the tool classification.
+4. If you accidentally produce a different tier, immediately correct it to the tool's classification.
+5. Only one JSON object as final output - no surrounding commentary.
+
 Risk Tiers (ONLY THESE FOUR VALUES ARE VALID):
 - "prohibited" (score ≥85): Cannot be deployed (Article 5)
 - "high_risk" (score 55-84): Requires strict compliance (Articles 6, 8, 9)
@@ -326,6 +353,26 @@ class ComplianceOrchestrator:
             
             # Parse events for final content and state
             for event in events:
+                # Instrument tool call attempts
+                try:
+                    if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts'):
+                        for part in event.content.parts:
+                            # ADK function call parts have 'function_call'
+                            if hasattr(part, 'function_call') and part.function_call:
+                                fn = part.function_call
+                                tool_name = getattr(fn, 'name', 'UNKNOWN')
+                                # Attempt to extract available tools from agent state
+                                available_tools = []
+                                if hasattr(event, 'agent') and hasattr(event.agent, 'tools'):
+                                    available_tools = [t.name for t in event.agent.tools]
+                                logger.warning(
+                                    "Tool invocation attempt: agent=%s attempted=%s available=%s",
+                                    getattr(event, 'agent_name', getattr(event, 'agent', 'UNKNOWN')),
+                                    tool_name,
+                                    available_tools
+                                )
+                except Exception as inst_err:
+                    logger.debug(f"Instrumentation error while parsing event: {inst_err}")
                 # Get the text content from the event
                 if hasattr(event, 'content') and event.content:
                     final_content = event.content
@@ -367,8 +414,106 @@ class ComplianceOrchestrator:
                             logger.warning(f"Text preview: {text[:200]}")
             
             # Return assessment from parsed report
+            # Attempt to get authoritative assessment from state (ComplianceClassifier output)
+            state_assessment = {}
+            if "assessment" in final_state and isinstance(final_state.get("assessment"), dict):
+                state_assessment = final_state.get("assessment", {})
+            else:
+                logger.warning("No 'assessment' key found in final_state. Keys present: %s", list(final_state.keys()))
+
+            # Pull last tool output if available for ground truth
+            tool_output = None
+            try:
+                from src.tools_adk import ComplianceScoringTool as _CST
+                tool_output = getattr(_CST, "_last_output", None)
+            except Exception:
+                tool_output = None
+
+            # Fallback: if tool_output missing, invoke scoring tool directly using system_info
+            if not tool_output:
+                try:
+                    from src.tools_adk import ComplianceScoringTool as _CST
+                    _fallback_tool = _CST()
+                    import json as _json
+                    tool_raw = _fallback_tool.execute(_json.dumps(system_info))
+                    tool_output = _json.loads(tool_raw)
+                    logger.warning("Fallback ComplianceScoringTool invocation performed (direct execute).")
+                except Exception as e:
+                    logger.error(f"Fallback ComplianceScoringTool invocation failed: {e}")
+
+            # Extract report classification
+            report_classification = report_data.get("risk_classification", {}) if isinstance(report_data, dict) else {}
+
+            def _normalize_tier(val: Any) -> str:
+                if not isinstance(val, str):
+                    return ""
+                return val.lower().replace(" ", "_").replace("-", "_")
+
+            # Build validated assessment starting from tool output → state → report
+            validated = {}
+            if tool_output and isinstance(tool_output, dict):
+                validated = {
+                    "tier": _normalize_tier(tool_output.get("classification", "")),
+                    "score": tool_output.get("score", 0),
+                    "confidence": report_classification.get("confidence") or state_assessment.get("confidence") or 0.8,
+                    "articles": tool_output.get("relevant_articles", [])
+                }
+            elif state_assessment:
+                # Fallback to classifier state if tool output missing
+                validated = {
+                    "tier": _normalize_tier(state_assessment.get("risk_tier") or state_assessment.get("tier") or ""),
+                    "score": state_assessment.get("risk_score") or state_assessment.get("score") or 0,
+                    "confidence": state_assessment.get("confidence", 0.7),
+                    "articles": state_assessment.get("relevant_articles", [])
+                }
+            else:
+                validated = {
+                    "tier": _normalize_tier(report_classification.get("tier", "")),
+                    "score": report_classification.get("score", 0),
+                    "confidence": report_classification.get("confidence", 0.5),
+                    "articles": report_classification.get("articles", [])
+                }
+
+            # Compare report classification against validated assessment; override mismatch
+            mismatch = False
+            if report_classification:
+                rep_tier = _normalize_tier(report_classification.get("tier", ""))
+                rep_score = report_classification.get("score")
+                if rep_tier and rep_tier != validated.get("tier"):
+                    mismatch = True
+                if rep_score is not None and isinstance(rep_score, (int, float)) and abs(rep_score - validated.get("score", 0)) > 1e-6:
+                    mismatch = True
+
+            # Pattern-based correction: if minimal_risk but chatbot/deepfake keywords signal limited/high risk
+            if not mismatch:
+                if validated.get("tier") == "minimal_risk":
+                    from src.tools_adk import ComplianceScoringTool as _CST2
+                    _fw = _CST2()._load_framework()
+                    combined_text = f"{system_info.get('use_case','').lower()} {system_info.get('system_name','').lower()} {system_info.get('purpose','').lower()}"
+                    # Limited-risk patterns force minimum 25
+                    if any(p in combined_text for p in _fw.get("limited_risk_patterns", [])):
+                        logger.warning("Detected limited-risk pattern but tier is minimal_risk. Forcing limited_risk floor.")
+                        validated["tier"] = "limited_risk"
+                        validated["score"] = max(validated.get("score", 0), 25)
+                        mismatch = True
+                    # High-risk patterns force minimum 60
+                    elif any(p in combined_text for p in _fw.get("high_risk_patterns", [])):
+                        logger.warning("Detected high-risk pattern but tier is minimal_risk. Forcing high_risk minimum score.")
+                        validated["tier"] = "high_risk"
+                        validated["score"] = max(validated.get("score", 0), 60)
+                        mismatch = True
+
+            if mismatch:
+                logger.warning("Risk classification in final report differed from tool/state. Overriding with validated assessment.")
+                # Inject corrected classification into report
+                if isinstance(report_data, dict):
+                    report_data.setdefault("risk_classification", {})
+                    report_data["risk_classification"].update(validated)
+            else:
+                logger.info("Risk classification validated against tool/state.")
+
             return {
-                "assessment": report_data.get("risk_classification", {}),
+                "assessment": validated,
                 "report": report_data,
                 "state": final_state,
                 "metadata": {
@@ -381,7 +526,11 @@ class ComplianceOrchestrator:
                         "LegalAggregator (with RelevanceChecker)",
                         "ComplianceClassifier",
                         "ReportGenerator"
-                    ]
+                    ],
+                    "validation": {
+                        "source": "tool_output" if tool_output else ("state_assessment" if state_assessment else "report_only"),
+                        "mismatch_corrected": mismatch
+                    }
                 }
             }
             

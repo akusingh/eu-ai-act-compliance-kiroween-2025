@@ -204,7 +204,8 @@ class ComplianceScoringTool(BaseTool):
                 "classification": classification,
                 "relevant_articles": articles,
                 "requires_assessment": classification in ["prohibited", "high_risk"],
-                "transparency_required": classification in ["limited_risk", "high_risk", "prohibited"]
+                "transparency_required": classification in ["limited_risk", "high_risk", "prohibited"],
+                "origin": "ComplianceScoringTool"
             }
             
             # Store output for potential validation
@@ -299,6 +300,8 @@ class ComplianceScoringTool(BaseTool):
         
         # Check for limited-risk patterns (general case)
         elif any(pattern in combined_text for pattern in self.framework["limited_risk_patterns"]):
+            # Limited-risk patterns require minimum transparency obligations (Article 52, 53)
+            score = max(score, 25)  # Ensure minimum LIMITED_RISK score
             # Cap score to stay in LIMITED_RISK tier if it would exceed
             if score >= 55:
                 score = 50  # Cap to stay in LIMITED_RISK tier
