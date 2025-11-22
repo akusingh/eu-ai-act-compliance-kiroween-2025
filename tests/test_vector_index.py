@@ -10,138 +10,159 @@ class TestVectorIndexTool:
     """Test suite for VectorIndexTool."""
     
     @pytest.fixture
-    def mock_embedding_model(self):
-        """Create a mock embedding model."""
-        mock_model = Mock()
-        mock_model.embed_query.return_value = [0.1] * 768  # 768-dim embedding
-        return mock_model
-    
-    @pytest.fixture
-    def vector_tool(self, mock_embedding_model):
-        """Create a VectorIndexTool instance with mocked embedding model."""
-        with patch('src.vector_index_tool.GoogleGenerativeAIEmbeddings', return_value=mock_embedding_model):
-            tool = VectorIndexTool(section="articles")
+    def vector_tool(self):
+        """Create a VectorIndexTool instance with mocked genai.embed_content."""
+        # Mock genai.configure to avoid API key requirement
+        with patch('google.generativeai.configure'):
+            # Create tool instance - will load from cache or use empty index
+            tool = VectorIndexTool()
             return tool
     
-    def test_tool_initialization_articles(self):
-        """Test tool initialization with articles section."""
-        with patch('src.vector_index_tool.GoogleGenerativeAIEmbeddings'):
-            tool = VectorIndexTool(section="articles")
-            assert tool.name == "search_euaiact_articles"
-            assert "articles" in tool.description.lower()
-            assert tool.section == "articles"
+    def test_tool_initialization(self):
+        """Test tool initialization."""
+        with patch('google.generativeai.configure'):
+            tool = VectorIndexTool()
+            assert tool.name == "vector_search_eu_ai_act"
+            assert "hybrid" in tool.description.lower() or "search" in tool.description.lower()
+            assert tool.chunks is not None
     
-    def test_tool_initialization_recitals(self):
-        """Test tool initialization with recitals section."""
-        with patch('src.vector_index_tool.GoogleGenerativeAIEmbeddings'):
-            tool = VectorIndexTool(section="recitals")
-            assert tool.name == "search_euaiact_recitals"
-            assert "recitals" in tool.description.lower()
-            assert tool.section == "recitals"
-    
-    def test_tool_initialization_annexes(self):
-        """Test tool initialization with annexes section."""
-        with patch('src.vector_index_tool.GoogleGenerativeAIEmbeddings'):
-            tool = VectorIndexTool(section="annexes")
-            assert tool.name == "search_euaiact_annexes"
-            assert "annexes" in tool.description.lower()
-            assert tool.section == "annexes"
-    
-    def test_invalid_section_raises_error(self):
-        """Test that invalid section raises ValueError."""
-        with pytest.raises(ValueError):
-            with patch('src.vector_index_tool.GoogleGenerativeAIEmbeddings'):
-                VectorIndexTool(section="invalid_section")
+    def test_tool_has_required_attributes(self):
+        """Test that tool has all required attributes."""
+        with patch('google.generativeai.configure'):
+            tool = VectorIndexTool()
+            assert hasattr(tool, 'chunks')
+            assert hasattr(tool, 'embeddings')
+            assert hasattr(tool, 'bm25')
+            assert hasattr(tool, 'text_path')
+            assert hasattr(tool, 'cache_dir')
     
     def test_search_query_structure(self, vector_tool):
         """Test that search accepts properly formatted queries."""
         query = '{"query": "high-risk AI systems", "top_k": 5}'
         
-        # Mock the vector store
-        mock_results = [
-            Mock(page_content="Article 6: High-risk AI systems", metadata={"source": "article_6"}),
-            Mock(page_content="Article 9: Risk management", metadata={"source": "article_9"})
-        ]
-        
-        with patch.object(vector_tool, 'vector_store') as mock_store:
-            mock_store.similarity_search.return_value = mock_results
-            result = vector_tool._run(query)
-            
-            assert result is not None
-            assert len(result) > 0
+        # Mock genai.embed_content and hybrid_search
+        with patch('google.generativeai.embed_content', return_value={'embedding': [0.1] * 768}):
+            with patch.object(vector_tool, '_hybrid_search') as mock_hybrid:
+                # Add dummy chunks and embeddings
+                vector_tool.chunks = [
+                    {"text": "Article 6: High-risk AI systems", "article": "Article 6"},
+                    {"text": "Article 9: Risk management", "article": "Article 9"}
+                ]
+                vector_tool.embeddings = [[0.1] * 768, [0.2] * 768]
+                
+                mock_hybrid.return_value = [
+                    {"article": "Article 6", "text": "Article 6: High-risk AI systems", "score": 0.9}
+                ]
+                
+                result = vector_tool.execute(query)
+                
+                assert result is not None
+                assert isinstance(result, str)
+                assert len(result) > 0
     
     def test_top_k_parameter_respected(self, vector_tool):
         """Test that top_k parameter limits results."""
         query = '{"query": "test query", "top_k": 3}'
         
-        mock_results = [Mock(page_content=f"Result {i}", metadata={"source": f"doc_{i}"}) for i in range(3)]
+        # Add multiple dummy chunks and embeddings
+        vector_tool.chunks = [
+            {"text": f"Result {i}", "article": f"Article {i}"} 
+            for i in range(5)
+        ]
+        vector_tool.embeddings = [[0.1 * i] * 768 for i in range(5)]
         
-        with patch.object(vector_tool, 'vector_store') as mock_store:
-            mock_store.similarity_search.return_value = mock_results
-            result = vector_tool._run(query)
-            
-            # Should call similarity_search with k=3
-            mock_store.similarity_search.assert_called_once()
-            call_kwargs = mock_store.similarity_search.call_args[1]
-            assert call_kwargs.get('k') == 3 or len(mock_store.similarity_search.call_args[0]) >= 2
+        with patch('google.generativeai.embed_content', return_value={'embedding': [0.1] * 768}):
+            with patch.object(vector_tool, '_hybrid_search') as mock_hybrid:
+                mock_hybrid.return_value = [
+                    {"article": f"Article {i}", "text": f"Result {i}", "score": 1.0 - i*0.1}
+                    for i in range(3)
+                ]
+                result = vector_tool.execute(query)
+                
+                # Result should be limited by top_k
+                assert result is not None
+                assert isinstance(result, str)
+                # Verify top_k was passed correctly
+                mock_hybrid.assert_called_once()
+                assert mock_hybrid.call_args[0][2] == 3  # top_k argument
     
     def test_default_top_k_value(self, vector_tool):
-        """Test that default top_k is 5 when not specified."""
+        """Test that default top_k is used when not specified."""
         query = '{"query": "test query"}'
         
-        mock_results = [Mock(page_content="Result", metadata={"source": "doc"})]
+        vector_tool.chunks = [{"text": "Result", "article": "Article 1"}]
+        vector_tool.embeddings = [[0.1] * 768]
         
-        with patch.object(vector_tool, 'vector_store') as mock_store:
-            mock_store.similarity_search.return_value = mock_results
-            vector_tool._run(query)
-            
-            # Check that default k=5 was used
-            call_args = mock_store.similarity_search.call_args
-            # Either positional or keyword argument
-            if len(call_args[0]) > 1:
-                assert call_args[0][1] == 5
-            elif 'k' in call_args[1]:
-                assert call_args[1]['k'] == 5
+        with patch('google.generativeai.embed_content', return_value={'embedding': [0.1] * 768}):
+            with patch.object(vector_tool, '_hybrid_search') as mock_hybrid:
+                mock_hybrid.return_value = [{"article": "Article 1", "text": "Result", "score": 0.9}]
+                result = vector_tool.execute(query)
+                
+                # Should return valid result with default top_k (3)
+                assert result is not None
+                assert isinstance(result, str)
+                # Verify default top_k=3 was used
+                mock_hybrid.assert_called_once()
+                assert mock_hybrid.call_args[0][2] == 3  # default top_k
     
     def test_empty_query_handling(self, vector_tool):
         """Test handling of empty query string."""
         query = '{"query": ""}'
         
-        result = vector_tool._run(query)
-        # Should handle gracefully
-        assert result is not None
+        vector_tool.chunks = [{"text": "Test content", "article": "Article 1"}]
+        vector_tool.embeddings = [[0.1] * 768]
+        
+        with patch('google.generativeai.configure'):
+            result = vector_tool.execute(query)
+            # Should return error JSON for empty query
+            assert result is not None
+            assert isinstance(result, str)
+            assert "error" in result.lower()
     
     def test_result_formatting(self, vector_tool):
         """Test that results are properly formatted."""
         query = '{"query": "test", "top_k": 2}'
         
-        mock_results = [
-            Mock(page_content="Content 1", metadata={"source": "doc_1"}),
-            Mock(page_content="Content 2", metadata={"source": "doc_2"})
+        vector_tool.chunks = [
+            {"text": "Content 1", "article": "Article 1"},
+            {"text": "Content 2", "article": "Article 2"}
         ]
+        vector_tool.embeddings = [[0.1] * 768, [0.2] * 768]
         
-        with patch.object(vector_tool, 'vector_store') as mock_store:
-            mock_store.similarity_search.return_value = mock_results
-            result = vector_tool._run(query)
-            
-            # Result should contain content from both documents
-            assert "Content 1" in result
-            assert "Content 2" in result
+        with patch('google.generativeai.embed_content', return_value={'embedding': [0.1] * 768}):
+            with patch.object(vector_tool, '_hybrid_search') as mock_hybrid:
+                mock_hybrid.return_value = [
+                    {"article": "Article 1", "text": "Content 1", "score": 0.9},
+                    {"article": "Article 2", "text": "Content 2", "score": 0.8}
+                ]
+                result = vector_tool.execute(query)
+                
+                # Result should be a formatted JSON string
+                assert result is not None
+                assert isinstance(result, str)
+                assert len(result) > 0
+                assert "results" in result
     
     def test_metadata_inclusion(self, vector_tool):
-        """Test that metadata is included in results."""
+        """Test that results include article references."""
         query = '{"query": "test", "top_k": 1}'
         
-        mock_results = [
-            Mock(page_content="Test content", metadata={"source": "article_5", "section": "paragraph_1"})
+        vector_tool.chunks = [
+            {"text": "Test content about prohibited practices", "article": "Article 5"}
         ]
+        vector_tool.embeddings = [[0.1] * 768]
         
-        with patch.object(vector_tool, 'vector_store') as mock_store:
-            mock_store.similarity_search.return_value = mock_results
-            result = vector_tool._run(query)
-            
-            # Result should contain metadata reference
-            assert "article_5" in result or "Test content" in result
+        with patch('google.generativeai.embed_content', return_value={'embedding': [0.1] * 768}):
+            with patch.object(vector_tool, '_hybrid_search') as mock_hybrid:
+                mock_hybrid.return_value = [
+                    {"article": "Article 5", "text": "Test content about prohibited practices", "score": 0.95}
+                ]
+                result = vector_tool.execute(query)
+                
+                # Result should be a JSON string with article reference
+                assert result is not None
+                assert isinstance(result, str)
+                assert "Article 5" in result
 
 
 class TestVectorIndexCaching:
@@ -175,44 +196,44 @@ class TestVectorSearchIntegration:
     """Integration tests for vector search functionality."""
     
     @pytest.mark.skipif(
-        not os.path.exists("data/embeddings_cache/articles/eu_ai_act_index.pkl"),
+        not os.path.exists("data/embeddings_cache/eu_ai_act_index.pkl"),
         reason="Vector index cache not available"
     )
     def test_real_search_articles(self):
         """Test real search on articles if cache is available."""
-        tool = VectorIndexTool(section="articles")
+        tool = VectorIndexTool()
         query = '{"query": "high-risk AI systems", "top_k": 3}'
         
-        result = tool._run(query)
+        result = tool.execute(query)
         
         assert result is not None
         assert len(result) > 0
         assert "Article" in result or "high" in result.lower()
     
     @pytest.mark.skipif(
-        not os.path.exists("data/embeddings_cache/recitals/eu_ai_act_index.pkl"),
+        not os.path.exists("data/embeddings_cache/eu_ai_act_index.pkl"),
         reason="Vector index cache not available"
     )
     def test_real_search_recitals(self):
         """Test real search on recitals if cache is available."""
-        tool = VectorIndexTool(section="recitals")
+        tool = VectorIndexTool()
         query = '{"query": "fundamental rights", "top_k": 3}'
         
-        result = tool._run(query)
+        result = tool.execute(query)
         
         assert result is not None
         assert len(result) > 0
     
     @pytest.mark.skipif(
-        not os.path.exists("data/embeddings_cache/annexes/eu_ai_act_index.pkl"),
+        not os.path.exists("data/embeddings_cache/eu_ai_act_index.pkl"),
         reason="Vector index cache not available"
     )
     def test_real_search_annexes(self):
         """Test real search on annexes if cache is available."""
-        tool = VectorIndexTool(section="annexes")
+        tool = VectorIndexTool()
         query = '{"query": "technical documentation", "top_k": 3}'
         
-        result = tool._run(query)
+        result = tool.execute(query)
         
         assert result is not None
         assert len(result) > 0

@@ -69,7 +69,7 @@ def create_aggregator_agent() -> Agent:
     Returns:
         ADK Agent configured with reranker tool and relevance checker
     """
-    # Create reranker tool
+    # Create reranker tool with both names for compatibility
     reranker_tool = RerankerTool()
     reranker_alias = RerankLegalFindingsAlias()
     
@@ -132,7 +132,10 @@ CALL rerank_legal_findings with JSON:
 
 Remember: Use the reranker first, then synthesize, then validate."""
     
+    # Register both tool names for compatibility (model might hallucinate either name)
     agent_tools = [reranker_tool, reranker_alias, AgentTool(relevance_checker)]
+    logger.info(f"Registering tools: {reranker_tool.name}, {reranker_alias.name}, RelevanceChecker")
+    
     agent = Agent(
         name="LegalAggregator",
         model=Gemini(
@@ -145,8 +148,9 @@ Remember: Use the reranker first, then synthesize, then validate."""
     )
     try:
         logger.info("Aggregator tools registered: %s", [t.name for t in agent.tools])
-    except Exception:
-        logger.info("Aggregator tools registered (len=%d)", len(agent_tools))
+    except Exception as e:
+        logger.warning(f"Could not list tool names: {e}")
+        logger.info("Aggregator tools registered (count=%d)", len(agent_tools))
     
     return agent
 

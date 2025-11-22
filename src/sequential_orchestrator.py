@@ -12,6 +12,7 @@ state management using output_key. The pipeline:
 
 import logging
 from typing import Dict, Any
+import time
 
 from google.adk.agents import Agent, SequentialAgent
 from google.adk.models.google_llm import Gemini
@@ -19,6 +20,7 @@ from google.adk.runners import InMemoryRunner
 import google.generativeai as genai
 
 from src.config import Config
+from src.observability import metrics_collector, trace_collector
 
 # Configure Gemini API globally for ADK
 if Config.GOOGLE_GENAI_API_KEY:
@@ -76,12 +78,20 @@ def create_compliance_classifier() -> Agent:
     
     instruction = """You are a Compliance Classifier Agent for EU AI Act risk assessment.
 
+⚠️  MANDATORY FIRST STEP - YOU MUST CALL THE TOOL BEFORE ANYTHING ELSE ⚠️
+Before you can output ANYTHING, you MUST:
+1. Call the compliance_scoring tool with the system profile from {profile}
+2. Wait for the tool's response
+3. Extract "score" and "classification" from tool output
+4. ONLY THEN can you proceed to write your assessment
+
+IF YOU DO NOT CALL THE TOOL FIRST, YOUR RESPONSE IS INVALID.
+
 WORKFLOW (MUST FOLLOW IN ORDER):
-1. Call ComplianceScoringTool with the system information
-2. Get the tool's "score" and "classification" output
-3. Use those EXACT values - do NOT modify them
+1. ✅ CALL compliance_scoring tool with {profile} data (MANDATORY FIRST STEP)
+2. ✅ Get the tool's "score" and "classification" output  
+3. ✅ Use those EXACT values - do NOT modify them
 4. Reference {legal_analysis} only for article citations and recommendations
-5. Reference {profile} only for system description
 
 CRITICAL - SCORING RULES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -303,6 +313,17 @@ class ComplianceOrchestrator:
             Exception: If assessment workflow fails
         """
         try:
+            # Start observability tracking
+            start_time = time.time()
+            metrics_collector.start_timer()
+            
+            trace_collector.record_trace(
+                agent_name="ComplianceOrchestrator",
+                action="assessment_start",
+                input_data={"system_name": system_info.get('system_name', 'Unknown')},
+                status="success"
+            )
+            
             logger.info("="*80)
             logger.info(f"🚀 STARTING COMPLIANCE ASSESSMENT: {system_info.get('system_name', 'Unknown')}")
             logger.info("="*80)
@@ -328,6 +349,15 @@ class ComplianceOrchestrator:
             import json
             import asyncio
             
+            # Track pipeline execution
+            pipeline_start = time.time()
+            trace_collector.record_trace(
+                agent_name="SequentialPipeline",
+                action="pipeline_execution_start",
+                input_data={"stages": 5},
+                status="success"
+            )
+            
             # Use run_debug for simpler execution (auto-creates sessions)
             # run_debug is async, so we need to run it with asyncio.run()
             # Get or create event loop to avoid "Event loop is closed" error
@@ -340,46 +370,74 @@ class ComplianceOrchestrator:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
             
-            events = loop.run_until_complete(self.runner.run_debug(
-                user_messages=f"Assess this AI system for EU AI Act compliance: {json.dumps(system_info)}",
-                quiet=True  # Suppress ADK debug output
-            ))
+            # Define async function to get session state
+            async def run_and_get_state():
+                events = await self.runner.run_debug(
+                    user_messages=f"Assess this AI system for EU AI Act compliance: {json.dumps(system_info)}",
+                    quiet=True  # Suppress ADK debug output
+                )
+                
+                # Get session state using async method
+                debug_user_id = 'debug_user_id'
+                debug_session_id = 'debug_session_id'
+                try:
+                    session = await self.runner.session_service.get_session(
+                        app_name="agents",
+                        user_id=debug_user_id,
+                        session_id=debug_session_id
+                    )
+                    return events, session
+                except Exception as e:
+                    logger.warning(f"Could not retrieve session: {e}")
+                    return events, None
+            
+            # Run async operations
+            events, session = loop.run_until_complete(run_and_get_state())
+            
+            pipeline_duration = time.time() - pipeline_start
+            metrics_collector.record_metric(
+                "pipeline_execution_time",
+                pipeline_duration,
+                tags={"system": system_info.get('system_name', 'Unknown')}
+            )
+            
+            trace_collector.record_trace(
+                agent_name="SequentialPipeline",
+                action="pipeline_execution_complete",
+                output_data={"duration_seconds": pipeline_duration},
+                status="success"
+            )
             
             logger.info("Compliance assessment completed successfully")
             
-            # Extract final content from last event
+            # Extract state and content
             final_content = None
             final_state = {}
             
-            # Parse events for final content and state
+            # Get final content from last event
             for event in events:
-                # Instrument tool call attempts
-                try:
-                    if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts'):
-                        for part in event.content.parts:
-                            # ADK function call parts have 'function_call'
-                            if hasattr(part, 'function_call') and part.function_call:
-                                fn = part.function_call
-                                tool_name = getattr(fn, 'name', 'UNKNOWN')
-                                # Attempt to extract available tools from agent state
-                                available_tools = []
-                                if hasattr(event, 'agent') and hasattr(event.agent, 'tools'):
-                                    available_tools = [t.name for t in event.agent.tools]
-                                logger.warning(
-                                    "Tool invocation attempt: agent=%s attempted=%s available=%s",
-                                    getattr(event, 'agent_name', getattr(event, 'agent', 'UNKNOWN')),
-                                    tool_name,
-                                    available_tools
-                                )
-                except Exception as inst_err:
-                    logger.debug(f"Instrumentation error while parsing event: {inst_err}")
-                # Get the text content from the event
                 if hasattr(event, 'content') and event.content:
                     final_content = event.content
+            
+            # Extract state from session
+            if session and hasattr(session, 'state'):
+                final_state = dict(session.state)
+                logger.info(f"✅ Retrieved session state with keys: {list(final_state.keys())}")
                 
-                # Also try to get state if available
-                if hasattr(event, 'state') and event.state:
-                    final_state = dict(event.state)
+                trace_collector.record_trace(
+                    agent_name="SessionService",
+                    action="state_retrieval",
+                    output_data={"state_keys": list(final_state.keys())},
+                    status="success"
+                )
+            else:
+                logger.warning("Session not available or has no state")
+                trace_collector.record_trace(
+                    agent_name="SessionService",
+                    action="state_retrieval",
+                    status="warning",
+                    error="Session not available or has no state attribute"
+                )
             
             # Final results logging
             logger.info("="*80)
@@ -413,33 +471,98 @@ class ComplianceOrchestrator:
                             logger.warning(f"Failed to parse JSON: {e}")
                             logger.warning(f"Text preview: {text[:200]}")
             
-            # Return assessment from parsed report
-            # Attempt to get authoritative assessment from state (ComplianceClassifier output)
+            # Get authoritative assessment from state (ComplianceClassifier output)
             state_assessment = {}
-            if "assessment" in final_state and isinstance(final_state.get("assessment"), dict):
-                state_assessment = final_state.get("assessment", {})
+            if "assessment" in final_state:
+                assessment_value = final_state.get("assessment")
+                
+                # Parse assessment - may be dict or JSON string
+                if isinstance(assessment_value, dict):
+                    state_assessment = assessment_value
+                elif isinstance(assessment_value, str):
+                    # Check if this is a tool call (ADK stores function calls in output_key)
+                    if '```tool_code' in assessment_value or 'CALL compliance_scoring' in assessment_value:
+                        logger.info("Assessment contains tool call, not result - will use tool validation")
+                        # This is the function call, not the result
+                        # The actual assessment should be extracted from the report or we rely on tool validation
+                    else:
+                        # Try to parse JSON from string (may be wrapped in markdown)
+                        try:
+                            text = assessment_value.strip()
+                            logger.debug(f"Raw assessment string (first 500 chars): {text[:500]}")
+                            
+                            # Handle various markdown code block formats:
+                            # ```json, ```tool_code, `````, etc.
+                            if '```' in text:
+                                # Find first code block regardless of language tag
+                                parts = text.split('```')
+                                if len(parts) >= 3:
+                                    # Get content between first ``` and second ```
+                                    code_block = parts[1]
+                                    # Remove language identifier if present (e.g. "json", "tool_code")
+                                    # Language identifiers are on the first line
+                                    lines = code_block.split('\n', 1)
+                                    if len(lines) > 1:
+                                        # If first line looks like language tag, skip it
+                                        first_line = lines[0].strip()
+                                        if first_line and not first_line.startswith('{'):
+                                            text = lines[1].strip()
+                                        else:
+                                            text = code_block.strip()
+                                    else:
+                                        text = code_block.strip()
+                            
+                            state_assessment = json.loads(text)
+                            logger.info(f"✅ Parsed assessment from state string")
+                        except Exception as e:
+                            logger.debug(f"Could not parse assessment string: {e}")
+                
+                if state_assessment:
+                    logger.info(f"✅ Assessment in state: tier={state_assessment.get('risk_tier')}, score={state_assessment.get('risk_score')}")
             else:
                 logger.warning("No 'assessment' key found in final_state. Keys present: %s", list(final_state.keys()))
 
-            # Pull last tool output if available for ground truth
+            # Invoke scoring tool for ground truth validation
+            # This serves as both fallback (if agent didn't run tool) and validation (to check agent accuracy)
             tool_output = None
             try:
                 from src.tools_adk import ComplianceScoringTool as _CST
-                tool_output = getattr(_CST, "_last_output", None)
-            except Exception:
-                tool_output = None
-
-            # Fallback: if tool_output missing, invoke scoring tool directly using system_info
-            if not tool_output:
-                try:
-                    from src.tools_adk import ComplianceScoringTool as _CST
-                    _fallback_tool = _CST()
-                    import json as _json
-                    tool_raw = _fallback_tool.execute(_json.dumps(system_info))
-                    tool_output = _json.loads(tool_raw)
-                    logger.warning("Fallback ComplianceScoringTool invocation performed (direct execute).")
-                except Exception as e:
-                    logger.error(f"Fallback ComplianceScoringTool invocation failed: {e}")
+                _tool = _CST()
+                import json as _json
+                logger.info(f"⚙️  Running tool for validation: {system_info.get('system_name')}")
+                
+                tool_start = time.time()
+                tool_raw = _tool.execute(_json.dumps(system_info))
+                tool_duration = time.time() - tool_start
+                
+                tool_output = _json.loads(tool_raw)
+                logger.info(f"✅ Tool result: score={tool_output.get('score')}, tier={tool_output.get('classification')}")
+                
+                metrics_collector.record_metric(
+                    "tool_execution_time",
+                    tool_duration,
+                    tags={"tool": "ComplianceScoringTool"}
+                )
+                
+                trace_collector.record_trace(
+                    agent_name="ComplianceScoringTool",
+                    action="score_validation",
+                    input_data={"system": system_info.get('system_name')},
+                    output_data={
+                        "score": tool_output.get('score'),
+                        "tier": tool_output.get('classification'),
+                        "duration": tool_duration
+                    },
+                    status="success"
+                )
+            except Exception as e:
+                logger.error(f"❌ Tool execution failed: {e}")
+                trace_collector.record_trace(
+                    agent_name="ComplianceScoringTool",
+                    action="score_validation",
+                    status="error",
+                    error=str(e)
+                )
 
             # Extract report classification
             report_classification = report_data.get("risk_classification", {}) if isinstance(report_data, dict) else {}
@@ -483,25 +606,10 @@ class ComplianceOrchestrator:
                     mismatch = True
                 if rep_score is not None and isinstance(rep_score, (int, float)) and abs(rep_score - validated.get("score", 0)) > 1e-6:
                     mismatch = True
-
-            # Pattern-based correction: if minimal_risk but chatbot/deepfake keywords signal limited/high risk
-            if not mismatch:
-                if validated.get("tier") == "minimal_risk":
-                    from src.tools_adk import ComplianceScoringTool as _CST2
-                    _fw = _CST2()._load_framework()
-                    combined_text = f"{system_info.get('use_case','').lower()} {system_info.get('system_name','').lower()} {system_info.get('purpose','').lower()}"
-                    # Limited-risk patterns force minimum 25
-                    if any(p in combined_text for p in _fw.get("limited_risk_patterns", [])):
-                        logger.warning("Detected limited-risk pattern but tier is minimal_risk. Forcing limited_risk floor.")
-                        validated["tier"] = "limited_risk"
-                        validated["score"] = max(validated.get("score", 0), 25)
-                        mismatch = True
-                    # High-risk patterns force minimum 60
-                    elif any(p in combined_text for p in _fw.get("high_risk_patterns", [])):
-                        logger.warning("Detected high-risk pattern but tier is minimal_risk. Forcing high_risk minimum score.")
-                        validated["tier"] = "high_risk"
-                        validated["score"] = max(validated.get("score", 0), 60)
-                        mismatch = True
+            
+            # REMOVED: Pattern-based correction that was overriding tool output
+            # The tool is context-aware and already handles deepfake detection vs generation
+            # Trust the tool's judgment - it knows the difference between detection and generation
 
             if mismatch:
                 logger.warning("Risk classification in final report differed from tool/state. Overriding with validated assessment.")
@@ -509,8 +617,43 @@ class ComplianceOrchestrator:
                 if isinstance(report_data, dict):
                     report_data.setdefault("risk_classification", {})
                     report_data["risk_classification"].update(validated)
+                    
+                trace_collector.record_trace(
+                    agent_name="ComplianceOrchestrator",
+                    action="classification_mismatch_correction",
+                    input_data={"report_tier": rep_tier, "validated_tier": validated.get("tier")},
+                    output_data={"corrected": True},
+                    status="success"
+                )
             else:
                 logger.info("Risk classification validated against tool/state.")
+            
+            # Record final assessment metrics
+            total_duration = time.time() - start_time
+            metrics_collector.record_metric(
+                "total_assessment_time",
+                total_duration,
+                tags={
+                    "system": system_info.get('system_name', 'Unknown'),
+                    "risk_tier": validated.get("tier", "unknown")
+                }
+            )
+            metrics_collector.record_metric(
+                "risk_score",
+                validated.get("score", 0),
+                tags={"system": system_info.get('system_name', 'Unknown')}
+            )
+            
+            trace_collector.record_trace(
+                agent_name="ComplianceOrchestrator",
+                action="assessment_complete",
+                output_data={
+                    "tier": validated.get("tier"),
+                    "score": validated.get("score"),
+                    "total_duration": total_duration
+                },
+                status="success"
+            )
 
             return {
                 "assessment": validated,
@@ -537,6 +680,15 @@ class ComplianceOrchestrator:
         except Exception as e:
             error_msg = f"SequentialAgent assessment workflow failed: {str(e)}"
             logger.error(error_msg, exc_info=True)
+            
+            trace_collector.record_trace(
+                agent_name="ComplianceOrchestrator",
+                action="assessment_failed",
+                input_data={"system": system_info.get('system_name', 'Unknown')},
+                status="error",
+                error=error_msg
+            )
+            
             raise Exception(error_msg) from e
     
     def get_pipeline_info(self) -> Dict[str, Any]:

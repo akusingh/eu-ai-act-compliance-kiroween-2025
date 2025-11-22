@@ -8,7 +8,7 @@ from pathlib import Path
 from src.models import RiskTier
 # Using SequentialAgent-based orchestrator for evaluation
 from src.sequential_orchestrator import ComplianceOrchestrator
-from src.observability import metrics_collector
+from src.observability import metrics_collector, trace_collector
 
 
 logger = logging.getLogger(__name__)
@@ -206,6 +206,18 @@ class AgentEvaluator:
         
         for idx, scenario in enumerate(self.scenarios):
             try:
+                logger.info(f"Running scenario {idx+1}/{len(self.scenarios)}: {scenario.scenario_id}")
+                
+                trace_collector.record_trace(
+                    agent_name="Evaluator",
+                    action="scenario_start",
+                    input_data={
+                        "scenario_id": scenario.scenario_id,
+                        "expected_tier": scenario.expected_risk_tier.value
+                    },
+                    status="success"
+                )
+                
                 # Run assessment
                 result = self.orchestrator.assess_system(scenario.system_info)
                 
@@ -243,6 +255,30 @@ class AgentEvaluator:
                 
                 self.results.append(result_data)
                 
+                # Record scenario completion
+                trace_collector.record_trace(
+                    agent_name="Evaluator",
+                    action="scenario_complete",
+                    output_data={
+                        "scenario_id": scenario.scenario_id,
+                        "expected": scenario.expected_risk_tier.value,
+                        "actual": scenario.actual_risk_tier.value,
+                        "correct": scenario.is_correct,
+                        "score": result_data["risk_score"]
+                    },
+                    status="success"
+                )
+                
+                metrics_collector.record_metric(
+                    "scenario_result",
+                    1 if scenario.is_correct else 0,
+                    tags={
+                        "scenario_id": scenario.scenario_id,
+                        "expected_tier": scenario.expected_risk_tier.value,
+                        "actual_tier": scenario.actual_risk_tier.value
+                    }
+                )
+                
                 # Add delay between assessments to avoid rate limits
                 # Each assessment uses ~13-15 API requests, rate limit is 15/min
                 # Need to wait 90 seconds for rate limit window to reset (extra buffer)
@@ -253,6 +289,15 @@ class AgentEvaluator:
             except Exception as e:
                 failed += 1
                 logger.error(f"Scenario {scenario.scenario_id} execution failed: {e}")
+                
+                trace_collector.record_trace(
+                    agent_name="Evaluator",
+                    action="scenario_failed",
+                    input_data={"scenario_id": scenario.scenario_id},
+                    status="error",
+                    error=str(e)
+                )
+                
                 self.results.append({
                     "scenario_id": scenario.scenario_id,
                     "error": str(e),
@@ -274,6 +319,19 @@ class AgentEvaluator:
         
         logger.info(f"Evaluation complete: {successful}/{total} passed")
         metrics_collector.record_metric("evaluation_accuracy", accuracy)
+        metrics_collector.record_metric(
+            "evaluation_summary",
+            successful,
+            tags={"total": str(total), "failed": str(failed)}
+        )
+        
+        # Save metrics and traces
+        try:
+            metrics_collector.save_metrics("outputs/metrics.json")
+            trace_collector.save_traces("outputs/traces.json")
+            logger.info("Observability data saved to outputs/")
+        except Exception as e:
+            logger.warning(f"Failed to save observability data: {e}")
         
         return evaluation_summary
     

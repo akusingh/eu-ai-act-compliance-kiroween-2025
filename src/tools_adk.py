@@ -265,7 +265,7 @@ class ComplianceScoringTool(BaseTool):
             return max(score, 85)
         
         # Context-aware check for "deepfake" keyword
-        if "deepfake" in combined_text:
+        if "deepfake" in combined_text or "synthetic media" in combined_text:
             # Detection systems are lower risk than generation systems
             if any(word in combined_text for word in ["detection", "detect", "identify", "recognize"]):
                 # Deepfake detection is limited-risk (transparency obligation)
@@ -273,10 +273,18 @@ class ComplianceScoringTool(BaseTool):
                 if score >= 55:
                     score = 50  # Cap to LIMITED_RISK
             else:
-                # Deepfake generation is high-risk
-                score = max(score, 60)
-                if score >= 85:
-                    score = 79
+                # Deepfake generation with human oversight → LIMITED_RISK (Article 52)
+                # Without human oversight → HIGH_RISK  
+                if system_data.get("human_oversight", False):
+                    # With oversight: transparency requirements, limited risk
+                    score = max(score, 35)
+                    if score >= 55:
+                        score = 50  # Cap to LIMITED_RISK
+                else:
+                    # Without oversight: manipulative potential, high risk  
+                    score = max(score, 60)
+                    if score >= 85:
+                        score = 79
         
         # Context-aware check for "recommendation" keyword  
         elif "recommendation" in combined_text or "recommender" in combined_text:
