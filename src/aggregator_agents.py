@@ -84,11 +84,11 @@ Your role:
    - Articles (legal requirements)
    - Annexes (specific lists and examples)
 
-2. Rerank all findings by relevance:
-    - Collect all text chunks from 3 sources
-    - CALL THE TOOL EXACTLY BY NAME: rerank_legal_findings
-    - Do NOT invent new names (e.g., 'RerankLegalFindings'). An alias is provided but use the documented name.
-    - Focus on top 10 most relevant results
+2. Synthesize findings (reranking is optional):
+    - Combine all text chunks from 3 sources
+    - Identify most relevant information
+    - Focus on top findings that answer the query
+    - You may use rerank_legal_findings tool if needed, but it's optional
 
 3. Synthesize into coherent legal analysis:
    - Combine findings into unified assessment
@@ -122,15 +122,7 @@ Output format (JSON):
   "research_quality": "Assessment from relevance checker"
 }
 
-Tool usage example:
-CALL rerank_legal_findings with JSON:
-{
-    "query": "<original_query>",
-    "documents": ["recital text", "article text", "annex text"],
-    "top_n": 10
-}
-
-Remember: Use the reranker first, then synthesize, then validate."""
+Note: Reranking tool is available but optional. You can synthesize findings directly without calling any tools if the research is already clear and relevant."""
     
     # Register both tool names for compatibility (model might hallucinate either name)
     agent_tools = [reranker_tool, reranker_alias, AgentTool(relevance_checker)]

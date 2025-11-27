@@ -13,7 +13,7 @@ digraph ProjectStructure {
     fontname="Arial Bold";
     
     // Root
-    root [label="kaggle-capstone/", fillcolor=lightcoral, penwidth=2];
+    root [label="eu-ai-act-compliance/", fillcolor=lightcoral, penwidth=2];
     
     // Main directories
     src [label="src/\n(Core modules)", fillcolor=lightblue];

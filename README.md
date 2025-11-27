@@ -1,12 +1,32 @@
-# EU AI Act Compliance Agent
+# 🏆 EU AI Act Compliance Agent
 
-> **Advanced Multi-Agent System for EU AI Act Compliance Assessment**  
-> Built with Google's Agent Development Kit (ADK) | Parallel Research | Hybrid Vector Search | Production-Ready
+> **Kiroween Hackathon 2024 Submission**
 
+## Advanced Multi-Agent System for EU AI Act Compliance Assessment
+
+**Built with Kiro AI IDE** - Showcasing AI-assisted development with steering rules, agent hooks, and specs
+
+**Tech Stack:** Google ADK • Gemini 2.0 Flash • Hybrid Search • Multi-Agent Architecture
+
+[![Kiroween 2024](https://img.shields.io/badge/Kiroween-2024-purple.svg)](https://kiroween.devpost.com/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Google ADK](https://img.shields.io/badge/Google-ADK-4285F4.svg)](https://github.com/google/adk)
 [![Gemini 2.0](https://img.shields.io/badge/Gemini-2.0%20Flash-orange.svg)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 🤖 Built with Kiro AI IDE
+
+This project showcases **Kiro's powerful AI-assisted development features**:
+
+- **📋 Steering Rules** - EU AI Act knowledge and architecture patterns provided as AI context
+- **⚡ Agent Hooks** - Automated compliance checks, testing, and documentation updates
+- **📐 Specs** - Structured feature development (e.g., multi-regulation support)
+- **🚀 AI Code Generation** - 10,000+ lines generated with Kiro assistance
+- **⏱️ 78% Time Savings** - Built in 13 hours vs 6 days without AI assistance
+
+**See [KIRO_SHOWCASE.md](KIRO_SHOWCASE.md) for detailed examples of how Kiro powered this project.**
 
 ---
 
@@ -264,6 +284,38 @@ Comprehensive test suite with 72 unit tests and 8 evaluation scenarios.
 
 ---
 
+## 🏆 Kiroween Hackathon 2024
+
+> **Built with Kiro AI IDE** - Showcasing AI-assisted development with steering rules, agent hooks, and specs
+
+**Try it now in 3 commands:**
+
+```bash
+git clone <your-repo-url>
+cd eu-ai-act-compliance
+./quickstart.sh
+```
+
+**Quick Demos:**
+- 🎬 **Interactive Terminal Demo**: `python demo_hackathon.py` (Best for live presentation)
+- 🌐 **Web UI**: `python web_demo.py` then open http://localhost:5000
+- 🧪 **Evaluation Suite**: `python evaluate.py` (Shows 87.5% accuracy)
+
+**Video Demo**: [Add your YouTube/Vimeo link here]
+
+### 🤖 Kiro Integration Features
+
+This project leverages Kiro AI IDE's powerful features:
+
+- **📋 Steering Rules** (`.kiro/steering/`) - AI context about EU AI Act, architecture patterns, and code standards
+- **⚡ Agent Hooks** (`.kiro/hooks/`) - Automated compliance checks, testing, and documentation updates
+- **📐 Specs** (`.kiro/specs/`) - Structured feature development templates (e.g., multi-regulation support)
+- **🔧 AI-Assisted Development** - Built entirely with Kiro's intelligent code generation and refactoring
+
+See [`.kiro/README.md`](.kiro/README.md) for detailed Kiro integration documentation.
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -279,7 +331,7 @@ Comprehensive test suite with 72 unit tests and 8 evaluation scenarios.
 ```bash
 # 1. Clone repository
 git clone <your-repo-url>
-cd kaggle-capstone
+cd eu-ai-act-compliance
 
 # 2. Create virtual environment
 python3.13 -m venv venv
@@ -464,7 +516,7 @@ print(f"Average Processing Time: {results['avg_time']:.1f}s")
 ![Project Structure](diagrams/07_project_structure.png)
 
 ```
-kaggle-capstone/
+eu-ai-act-compliance/
 ├── src/                          # Core application code
 │   ├── sequential_orchestrator.py   # 5-agent pipeline
 │   ├── parallel_research_agents.py  # 3 parallel researchers
@@ -786,7 +838,7 @@ See **[FINAL_EVALUATION_SUMMARY.md](FINAL_EVALUATION_SUMMARY.md)** for:
 ### In Progress 🚧
 - [ ] Apply evaluation fixes (→ 100% accuracy)
 - [ ] Demo video creation
-- [ ] Kaggle competition submission
+- [ ] Kiroween competition submission
 
 ### Future Enhancements 🔮
 - [ ] Web UI for interactive assessments
@@ -815,7 +867,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ```bash
 # Clone your fork
-git clone https://github.com/your-username/kaggle-capstone.git
+git clone https://github.com/your-username/eu-ai-act-compliance.git
 
 # Create virtual environment
 python3.13 -m venv venv
@@ -850,8 +902,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Contact & Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/kaggle-capstone/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/kaggle-capstone/discussions)
+- **Issues**: [GitHub Issues](https://github.com/your-username/eu-ai-act-compliance/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/eu-ai-act-compliance/discussions)
 - **Documentation**: See `docs/` folder and markdown files
 
 ---
@@ -869,6 +921,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ for the Kaggle Google AI Agent Development Competition**
+**Built with ❤️ for Kiroween 2025 Hackathon**
 
-*Last Updated: November 20, 2025*
+*Last Updated: November 27, 2025*

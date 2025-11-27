@@ -1,0 +1,27 @@
+{
+  "name": "Run Tests on Agent Changes",
+  "description": "Automatically run relevant tests when agent code is modified",
+  "trigger": {
+    "type": "file_save",
+    "pattern": "src/{sequential_orchestrator,parallel_research_agents,aggregator_agents}.py"
+  },
+  "actions": [
+    {
+      "type": "run_command",
+      "command": "python -m pytest tests/test_integration.py -v",
+      "description": "Run integration tests for agent pipeline"
+    },
+    {
+      "type": "ai_task",
+      "prompt": "Analyze test results. If any tests failed, suggest fixes based on the error messages and the agent changes made. Focus on agent instruction clarity and tool registration.",
+      "context_files": [
+        "tests/test_integration.py",
+        "src/sequential_orchestrator.py",
+        "src/parallel_research_agents.py",
+        "src/aggregator_agents.py"
+      ]
+    }
+  ],
+  "enabled": false,
+  "note": "Disabled by default to avoid running on every save. Enable when actively developing agents."
+}

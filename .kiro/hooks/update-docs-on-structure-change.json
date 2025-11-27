@@ -1,0 +1,19 @@
+{
+  "name": "Update Documentation on Structure Change",
+  "description": "Automatically update README when project structure changes significantly",
+  "trigger": {
+    "type": "file_create",
+    "pattern": "src/**/*.py"
+  },
+  "actions": [
+    {
+      "type": "ai_task",
+      "prompt": "A new source file was created. Review the project structure and suggest updates to README.md if the new file introduces significant functionality that should be documented.",
+      "context_files": [
+        "README.md",
+        "src/"
+      ]
+    }
+  ],
+  "enabled": true
+}
