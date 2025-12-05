@@ -1,6 +1,6 @@
 # 🏆 EU AI Act Compliance Agent
 
-> **Kiroween Hackathon 2024 Submission**
+> **Kiroween Hackathon 2025 Submission**
 
 ## Advanced Multi-Agent System for EU AI Act Compliance Assessment
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Google ADK • Gemini 2.0 Flash • Hybrid Search • Multi-Agent Architecture
 
-[![Kiroween 2024](https://img.shields.io/badge/Kiroween-2024-purple.svg)](https://kiroween.devpost.com/)
+[![Kiroween 2024](https://img.shields.io/badge/Kiroween-2025-purple.svg)](https://kiroween.devpost.com/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Google ADK](https://img.shields.io/badge/Google-ADK-4285F4.svg)](https://github.com/google/adk)
 [![Gemini 2.0](https://img.shields.io/badge/Gemini-2.0%20Flash-orange.svg)](https://ai.google.dev/)
@@ -284,7 +284,7 @@ Comprehensive test suite with 72 unit tests and 8 evaluation scenarios.
 
 ---
 
-## 🏆 Kiroween Hackathon 2024
+## 🏆 Kiroween Hackathon 2025
 
 > **Built with Kiro AI IDE** - Showcasing AI-assisted development with steering rules, agent hooks, and specs
 
